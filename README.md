@@ -91,6 +91,7 @@ These values represent the **highest recorded readings since power-on**, allowin
 * ECUMaster Black with Bluetooth Adapter
 * LVGL v8.3
 * 8GB microSD card (FAT32)
+* EMU Black Software (Client version 2.175) in Microsoft Windows 10/11
 
 ---
 
