@@ -28,6 +28,33 @@ This project interfaces the **ECUMaster Black ECU** with an **ESP32** to create 
 
 ---
 
+## 🔧 Native ECUMaster Log Compatibility (HEX)
+
+🚧 **Coming soon (next version)**
+
+Planned support for saving logs in **ECUMaster-compatible HEX format**, enabling:
+
+- Direct import into **ECUMaster Black PC Software** (Windows 10 / 11)
+- Full use of ECUMaster’s native tools:
+  - Log viewer
+  - Channel math
+  - Overlays & comparisons
+- No CSV conversion or external tools required
+
+### Goal
+
+Use the ESP32 as a **standalone logger** that produces files **indistinguishable from ECU-side logs**.
+
+### This will allow
+
+- Laptop-free track days
+- Long-term logging with full ECUMaster analysis
+- Seamless workflow between ESP32 and official ECUMaster tools
+
+🛠️ *Implementation details and file format handling will be documented once finalized.*
+
+---
+
 ## 🆕 New Functionality – microSD Logging & Bluetooth Stability
 
 ### 📀 Automatic microSD Log Recording
