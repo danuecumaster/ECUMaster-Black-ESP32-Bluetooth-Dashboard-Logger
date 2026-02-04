@@ -208,7 +208,7 @@ This simplifies the workflow and keeps analysis fully within the official ECUMas
 
 ## 📜 License
 
-Licensed under the **GNU General Public License v3.0**. See [LICENSE](LICENSE).
+Licensed under the **GNU General Public License v3.0**. See [LICENSE](https://github.com/danuecumaster/ECUMaster-Black-ESP32-Bluetooth-Dashboard-Logger/wiki/LICENSE).
 
 ---
 
