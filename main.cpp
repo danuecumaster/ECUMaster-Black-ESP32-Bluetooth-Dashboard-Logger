@@ -13,8 +13,8 @@ extern const lv_font_t ui_font_JBM_10;
 using namespace std;
 
 //#define USE_NAME
-const char *pin = "1234";										/* BT Pin */
-String myBtName = "ESP32-BT-Master";							/* ESP's BT Name */
+const char *pin = "1234"; 				// EMU BLUETOOTH PIN
+String myBtName = "ESP32-BT-Master"; 	// ESP32 BLUETOOTH NAME
 
 #if !defined(CONFIG_BT_SPP_ENABLED)
 	#error Serial Bluetooth not available or not enabled. It is only available for the ESP32 chip.
@@ -23,27 +23,35 @@ String myBtName = "ESP32-BT-Master";							/* ESP's BT Name */
 BluetoothSerial SerialBT;
 
 #ifdef USE_NAME
-	String slaveName = "EMUCANBT_SPP";
+	String slaveName = "EMUCANBT_SPP"; 							 //EMU BLUETOOTH NAME
 #else
-	uint8_t address[6] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }; /* Update the MAC Address */
+	uint8_t address[6] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }; //EMU MAC ADDRESS
 #endif
 
+//SD CARD PINS
 #define SCK  18
 #define MISO 19
 #define MOSI 23
 #define CS   5
 
+//LOG SETTINGS
 File logFile;
-unsigned long lastLogMillis 	= 0;
-uint32_t logCounter 			= 0;
+unsigned long lastLogMillis   	= 0;
+uint32_t logCounter       		= 0;
 const unsigned long logInterval = 200;
-const uint64_t MIN_FREE_BYTES 	= 100ULL * 1024ULL * 1024ULL; 	/* Min empty storage: 100 MB */
-static unsigned long lastFlush 	= 0;
+const uint64_t MIN_FREE_BYTES   = 100ULL * 1024ULL * 1024ULL; // 100 MB
+static unsigned long lastFlush  = 0;
+#define LOG_BUF_SIZE 512
+uint8_t logBuf[LOG_BUF_SIZE];
+uint16_t logIdx = 0;
 
-const int backLightPin 	= 27;
-const int buzzerPin 	= 22;
-bool buzzerOn 			= false;
-bool btIconSts 			= false;
+//FLAGS
+const int backLightPin  = 27;
+const int buzzerPin   	= 22;
+bool buzzerOn       	= false;
+bool btIconSts      	= false;
+bool sdOK        		= false;
+
 static lv_style_t style_bt;
 static lv_style_t style_max0;
 static lv_style_t style_max1;
@@ -51,6 +59,7 @@ static lv_style_t style_max2;
 static lv_style_t style_max3;
 static bool style_initialized = false;
 
+//VALUE SETUP
 int rpm;
 int spd;
 float afr;
@@ -62,12 +71,13 @@ int ign;
 int inj;
 float bat;
 int cel;
-float maxboost 	= -100.0f;
-int maxclt 		= -40;
+float maxboost  = -100.0f;
+int maxclt   	= -40;
 
-unsigned long previousMillis 			= 0;
-const unsigned long reconnectInterval 	= 5000;
+unsigned long previousMillis      	  = 0;
+const unsigned long reconnectInterval = 5000;
 
+//FONTS
 LV_FONT_DECLARE(lv_font_montserrat_14);
 LV_FONT_DECLARE(lv_font_montserrat_28);
 LV_FONT_DECLARE(ui_font_JBM_18);                
@@ -75,10 +85,11 @@ LV_FONT_DECLARE(ui_font_JBM_15);
 LV_FONT_DECLARE(ui_font_JBM_10);                      
 
 lv_obj_t *bt_icon_label;
+lv_obj_t *sd_icon_label;
 lv_obj_t *max_icon_label;  
 lv_obj_t *max_icon_label1;  
 lv_obj_t *max_val_label_clt;
-lv_obj_t *max_val_label_bst;             
+lv_obj_t *max_val_label_bst;            
 
 // Display & LVGL setup
 TFT_eSPI tft = TFT_eSPI();
@@ -86,6 +97,30 @@ static lv_disp_draw_buf_t draw_buf;
 static lv_color_t buf[LV_HOR_RES_MAX * 20];
 lv_obj_t *table;
 
+//WRITE LOGS
+void logEMU(uint8_t *frame) {
+	if (!logFile) return;
+
+	// copy 5 bytes into RAM buffer
+	memcpy(&logBuf[logIdx], frame, 5);
+	logIdx += 5;
+	if (logIdx == LOG_BUF_SIZE) {
+		logFile.write(logBuf, LOG_BUF_SIZE);
+		logIdx = 0;
+	}
+
+	// periodic flush (longer interval = safer BT)
+	if (millis() - lastFlush > 5000) {
+		if (logIdx > 0) {
+			logFile.write(logBuf, logIdx);
+			logIdx = 0;
+		}
+		logFile.flush();
+		lastFlush = millis();
+	}
+}
+
+//CHECK STORAGE SPACE
 uint64_t getFreeBytes() {
 	uint64_t total = SD.totalBytes();
 	uint64_t used  = SD.usedBytes();
@@ -93,20 +128,19 @@ uint64_t getFreeBytes() {
 	return total - used;
 }
 
+//MAINTAIN FREE SPACE IN SD
 void ensureFreeSpace() {
 	uint64_t freeBytes = getFreeBytes();
 	if (freeBytes >= MIN_FREE_BYTES) {
 		Serial.println("SD space OK");
 		return;
 	}
-
 	Serial.println("Low SD space, deleting old logs...");
 
 	// Delete from the oldest possible index
 	for (int index = 1; index < 10000 && freeBytes < MIN_FREE_BYTES; index++) {
-		char name[20];
-		sprintf(name, "/log_%04d.csv", index);
-
+		char name[32];
+		sprintf(name, "/log_%04d.emualog", index);
 		if (SD.exists(name)) {
 			File f = SD.open(name);
 			uint32_t size = f ? f.size() : 0;
@@ -194,6 +228,7 @@ void create_table() {
 	lv_timer_handler();
 }
 
+//ESP32 SETUP
 void setup() {
 	tft.init();
 	pinMode(backLightPin, OUTPUT);
@@ -225,8 +260,10 @@ void setup() {
 	digitalWrite(backLightPin, HIGH);
 	connectToBt();
 	setupSD();
+	update_sd_icon_color();
 }
 
+//BLUETOOTH CONNECTION 
 void connectToBt() {
 	bool connected;
 	#ifndef USE_NAME
@@ -247,33 +284,31 @@ void connectToBt() {
 	update_bt_icon_color(SerialBT.hasClient(), false);
 }
 
+//SD CARD SETUP
 void setupSD() {
 	SPI.begin(SCK, MISO, MOSI, CS);
-
 	if (!SD.begin(CS)) {
 		Serial.println("SD FAIL");
+		sdOK = false;
 		return;
+	} else {
+		sdOK = true;
 	}
-
 	ensureFreeSpace();
 
 	// Create new CSV file every boot
 	String filename = getNextFilename();
-	logFile 		= SD.open(filename, FILE_WRITE);
-
+	logFile     	= SD.open(filename, FILE_WRITE);
 	if (!logFile) {
 		Serial.println("FILE CREATE FAIL");
+		sdOK = false;
 		return;
 	}
-
 	Serial.print("Logging to ");
 	Serial.println(filename);
-
-	// CSV header
-	logFile.println("_time,_map,_rpm,_tps,_afr,_ign,_inj,_clt,_spd");
-	logFile.flush();
 }
 
+//CHAR BUFFERS
 static char buf_rpm[12];
 static char buf_spd[16];
 static char buf_afr[12];
@@ -286,25 +321,29 @@ static char buf_bat[12];
 static char buf_max_clt[32];
 static char buf_max_boost[32];
 
+//READ BT DATA STREAM
 bool readFrame(uint8_t *frame) {
-	static uint8_t buf[5];
-	while (SerialBT.available()) {
-		uint8_t b = SerialBT.read();
-		// Shift buffer left
-		buf[0] = buf[1];
-		buf[1] = buf[2];
-		buf[2] = buf[3];
-		buf[3] = buf[4];
-		buf[4] = b;
-		// Sync on IDCHAR only
-		if (buf[1] == 0xA3) {
-			memcpy(frame, buf, 5);
-			return true;
-		}
-	}
-	return false;
+    static uint8_t buf[5];
+    static uint8_t idx = 0;
+    while (SerialBT.available()) {
+        buf[idx++] = SerialBT.read();
+        if (idx < 5) continue;
+
+        // candidate frame is buf[0..4]
+        uint8_t cs = (buf[0] + buf[1] + buf[2] + buf[3]) & 0xFF;
+        if (buf[1] == 0xA3 && cs == buf[4]) {
+            memcpy(frame, buf, 5);
+            idx = 0;              // clean reset ONLY on success
+            return true;
+        }
+        //resync: slide window by 1 byte
+        memmove(buf, buf + 1, 4);
+        idx = 4;
+    }
+    return false;
 }
 
+//ESP32 LOOP
 void loop() {
 	uint8_t frame[5];
 	uint8_t channel;
@@ -324,18 +363,18 @@ void loop() {
 
 	// Wait until at least 5 bytes are available
 	while (readFrame(frame)) {
+		logEMU(frame); //WRITE LOG
+
 		channel = frame[0];
 		value   = (frame[2] << 8) | frame[3];
-
 		switch (channel) {
-			case 1: case 2: case 3: case 5:
-			case 6: case 12: case 19:
-			case 24: case 28: case 255:
+			case 1: case 2: case 3: case 5: case 6: case 12: case 19: case 24: case 28: case 255:
 				break;
 			default:
 				continue;
 		}
 
+		//SANITIZE DISPLAY
 		if (channel == 1  && value > 9000) continue;
 		if (channel == 24 && value > 250)  continue;
 		if (channel == 28 && value > 500)  continue;
@@ -358,7 +397,6 @@ void loop() {
 			mapR = (static_cast<float>(value) / 100.0f);
 			boost = (mapR - 1.0132f);
 			if(maxboost < boost) { maxboost = boost; }      
-			// lv_table_set_cell_value(table, 3, 1, (String(mapR) + " BAR").c_str());
 			snprintf(buf_boost, sizeof(buf_boost), "%.2f BAR", boost);
 			lv_table_set_cell_value(table, 4, 1, buf_boost);    
 			snprintf(buf_max_boost, sizeof(buf_max_boost), "%.2fBAR", maxboost); 
@@ -381,7 +419,7 @@ void loop() {
 		} else if (chData == 19) {
 			inj = (static_cast<int>(value) / 2);
 			snprintf(buf_inj, sizeof(buf_inj), "%d %%", inj);
-			lv_table_set_cell_value(table, 3, 1, buf_inj);
+			lv_table_set_cell_value(table, 3, 1, buf_inj);      
 		} else if (chData == 5) {
 			bat = (static_cast<float>(value) / 37.0f);
 			snprintf(buf_bat, sizeof(buf_bat), "%.2f V", bat);
@@ -390,54 +428,16 @@ void loop() {
 			cel = decodeCheckEngine(value);
 		}
 	}
-
+	
+	//BUZZER WARNING
 	buzzerOn = (cel > 0 || clt > 110 || rpm > 7000 || boost > 1.20 || (bat < 11.00 && bat > 1.00));
 	digitalWrite(buzzerPin, (millis() % 600 < 300) && buzzerOn);
-
-	// ---------------- SD LOGGING ----------------
-	if (logFile && rpm > 0 && millis() - lastLogMillis >= logInterval) {
-		lastLogMillis = millis();
-
-		char line[128];
-
-		// Scale floats to integers
-		int map_i = (int)(mapR * 100.0f);   // _map x100
-		int afr_i = (int)(afr  * 100.0f);   // _afr x100
-
-		// Clamp against sensor glitches
-		if (map_i < 0) map_i = 0;
-		if (afr_i < 0) afr_i = 0;
-
-		logCounter++;
-
-		int len = snprintf(
-			line, sizeof(line),
-			"%lu,%d,%d,%d,%d,%d,%d,%d,%d",
-			logCounter,// _time
-			map_i,     // _map_x100
-			rpm,       // _rpm
-			tps,       // _tps
-			afr_i,     // _afr_x100
-			ign,       // _ign
-			inj,       // _inj
-			clt,       // _clt
-			spd        // _spd
-		);
-
-		if (len > 0 && len < (int)sizeof(line)) {
-			logFile.write((uint8_t*)line, len);
-			logFile.write('\n');
-			if (millis() - lastFlush > 2000) {
-				logFile.flush();
-				lastFlush = millis();
-			}
-		}
-	}
 
 	lv_obj_invalidate(table);
 	lv_timer_handler();
 }
 
+//CEL DECODE
 int decodeCheckEngine(uint16_t value) {
 	int cel_codes = 0; string cel_names = "";
 	if (value == 0) {
@@ -486,8 +486,8 @@ void my_table_event_cb(lv_event_t * e) {
 		uint16_t row = dsc->id / lv_table_get_col_cnt(table);
 		uint16_t col = dsc->id % lv_table_get_col_cnt(table);
 
-		dsc->label_dsc->font = &ui_font_JBM_18;
-		dsc->label_dsc->align = LV_TEXT_ALIGN_CENTER;
+		dsc->label_dsc->font 	= &ui_font_JBM_18;
+		dsc->label_dsc->align 	= LV_TEXT_ALIGN_CENTER;
 		if ((row == 0 && col == 1) || (row == 0 && col == 3) || (row == 1 && col == 1) || (row == 1 && col == 3) || (row == 2 && col == 1) || (row == 2 && col == 3) || (row == 3 && col == 1) || (row == 3 && col == 3) ||
 		(row == 4 && col == 1) || (row == 4 && col == 2)) {
 			dsc->label_dsc->align = LV_TEXT_ALIGN_RIGHT;
@@ -498,6 +498,7 @@ void my_table_event_cb(lv_event_t * e) {
 	}
 }
 
+//WARNING COLORS AND CELL ALIGNMENT
 static void table_event_cb_bg(lv_event_t *e) {
 	lv_obj_t *table = lv_event_get_target(e);
 	lv_obj_draw_part_dsc_t *dsc = (lv_obj_draw_part_dsc_t *)lv_event_get_param(e);
@@ -513,13 +514,9 @@ static void table_event_cb_bg(lv_event_t *e) {
 		const char *value_str = lv_table_get_cell_value(table, row, col);
 
 		// Check if value_str is null or empty before conversion
-		float value = 0.0f;  // Default value
-		if (value_str != nullptr && value_str[0] != '\0') {
-			try {
-				value = std::stof(value_str);  // Convert string to float safely
-			} catch (...) {
-				value = 0.0f;  // Handle invalid conversions
-			}
+		float value = 0.0f;
+		if (value_str && value_str[0] != '\0') {
+			value = atof(value_str);
 		}
 
 		// Default cell color
@@ -562,6 +559,7 @@ static void table_event_cb_bg(lv_event_t *e) {
 	}
 }
 
+//UPDATE BT ICON
 void update_bt_icon_color(bool is_connected, bool firstTime) {
 	if (btIconSts != is_connected || firstTime) {
 		if (!style_initialized) {
@@ -578,12 +576,28 @@ void update_bt_icon_color(bool is_connected, bool firstTime) {
 	}
 }
 
+//UPDATE SD ICON
+void update_sd_icon_color() {
+	if (!sd_icon_label) { return; }
+	if (sdOK) { 
+		lv_obj_set_style_text_color(sd_icon_label, lv_color_make(0,255,0), 0); 
+	} else { 
+		lv_obj_set_style_text_color(sd_icon_label, lv_color_make(0,0,255), 0); 
+	}
+}
+
+//CREATE ICONS AND CUSTOM TEXT
 void create_bt_icon() {
 	bt_icon_label = lv_label_create(lv_scr_act());
 	lv_label_set_text(bt_icon_label, LV_SYMBOL_BLUETOOTH);
 	lv_obj_set_style_text_font(bt_icon_label, &lv_font_montserrat_28, LV_PART_MAIN);
 	lv_obj_align(bt_icon_label, LV_ALIGN_BOTTOM_RIGHT, -3, -5);
 	update_bt_icon_color(SerialBT.hasClient(), true);
+
+	sd_icon_label = lv_label_create(lv_scr_act());
+	lv_label_set_text(sd_icon_label, LV_SYMBOL_SAVE); // storage icon
+	lv_obj_set_style_text_font(sd_icon_label, &lv_font_montserrat_28, LV_PART_MAIN);
+	lv_obj_align(sd_icon_label, LV_ALIGN_BOTTOM_RIGHT, -30, -5);
 
 	max_icon_label = lv_label_create(lv_scr_act());
 	lv_label_set_text(max_icon_label, "CLT                BOOST");
@@ -618,11 +632,12 @@ void create_bt_icon() {
 	lv_label_set_text(max_val_label_bst, String(" ").c_str());
 }
 
+//GET NEXT FILE NAME
 String getNextFilename() {
 	int index = 1;
-	char name[20];
+	char name[32];
 	while (true) {
-		sprintf(name, "/log_%04d.csv", index);
+		sprintf(name, "/log_%04d.emualog", index);
 		if (!SD.exists(name)) {
 			return String(name);
 		}
