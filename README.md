@@ -189,7 +189,7 @@ Especially important in noisy RF environments or when reconnecting mid-drive.
 
 ![Display](Docs/display.jpg)
 
-[YouTUbe](https://youtu.be/EzVEeiy3vmI)
+[YouTube](https://youtu.be/EzVEeiy3vmI)
 
 ---
 
