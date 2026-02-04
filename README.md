@@ -1,4 +1,5 @@
 # 🚗 ECUMaster Black + ESP32 Bluetooth Display & Logger
+### Real-time ECU data, alerts, and native ECUMaster logging
 
 [![ESP32](https://img.shields.io/badge/board-ESP32-blue.svg)](https://www.espressif.com/en/products/socs/esp32)
 [![ECUMaster](https://img.shields.io/badge/device-ECUMaster-black.svg)](https://www.ecumaster.com)
@@ -8,189 +9,179 @@
 [![License: GPL v3](https://img.shields.io/badge/license-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0.en.html)
 [![Language: C++](https://img.shields.io/badge/language-C++-orange.svg)](https://isocpp.org)
 [![Vehicle Telemetry](https://img.shields.io/badge/type-Telemetry-lightgrey.svg)]()
-[![Data Logging](https://img.shields.io/badge/feature-Data%20Logging-green.svg)]()
+[![Data Logging](https://img.shields.io/badge/feature-Native%20Logging-green.svg)]()
 
 ---
 
-## 📦 Description
+## 📦 Overview
 
-This project interfaces the **ECUMaster Black ECU** with an **ESP32** to create a Bluetooth-enabled dashboard display, featuring:
+This project connects an **ECUMaster Black ECU** to an **ESP32** over Bluetooth, creating a compact **standalone ECU display** with:
 
-* Automatic Bluetooth reconnection
-* Real-time monitoring of engine vitals
-* **Peak value tracking (Peak Boost & Peak Coolant Temperature)**
-* Custom alerts (CEL, coolant temp, RPM, AFR, voltage, boost, etc.) via display & buzzer
-* TFT screen GUI (mono-space font) with **LVGL**
-* **Online Log Analyzer (mobile friendly)**
-* **Automatic on-device logging to microSD card** 🆕
-
-> ⚠️ **Note:** If `SerialBT.setPin(pin)` doesn't work, downgrade to **ESP32 Arduino Core 2.0.17** in the board manager.
+- Live engine telemetry
+- Driver alerts (visual + buzzer)
+- Peak value tracking
+- Automatic **native ECUMaster-compatible logging**
 
 ---
 
-## 🔧 Native ECUMaster Log Compatibility (HEX)
+## ✨ Core Features
 
-🚧 **Coming soon (next version)**
+### 🖥️ Live ECU Display
+- Real-time ECU data via Bluetooth
+- LVGL-based TFT GUI (mono-space fonts)
+- Fast refresh, low latency
+- Automatic Bluetooth reconnect
 
-Planned support for saving logs in **ECUMaster-compatible HEX format**, enabling:
+### 🚨 Alerts & Threshold Monitoring
+- Visual alerts on screen
+- Optional buzzer alerts
+- CEL warnings
+- Configurable thresholds for:
+  - Coolant temperature
+  - RPM
+  - AFR
+  - Voltage
+  - Boost / MAP
+  - CEL status
 
-- Direct import into **ECUMaster Black PC Software** (Windows 10 / 11)
-- Full use of ECUMaster’s native tools:
-  - Log viewer
-  - Channel math
-  - Overlays & comparisons
-- No CSV conversion or external tools required
+Designed to **keep the driver informed**, not distracted.
 
-### Goal
+---
 
-Use the ESP32 as a **standalone logger** that produces files **indistinguishable from ECU-side logs**.
+## 📊 Peak Value Tracking
 
-### This will allow
+The display tracks and shows the **highest values since power-on**:
 
+- **Peak Boost Pressure**
+- **Peak Coolant Temperature (CLT)**
+
+Useful for:
+- Track sessions
+- Safety checks
+- Quick post-drive review without opening logs
+
+---
+
+## 📀 Native ECUMaster-Compatible Logging
+
+The ESP32 records logs directly to a microSD card in **native ECUMaster Black–compatible format**.
+
+- Fully readable by **ECUMaster Black Software v2.x**
+- No CSV conversion
+- No external tools
+- Same workflow as ECU-side logs
+
+### How it works
+- Logging starts automatically on **engine start / ECU connection**
+- A **new log file is created for each engine start**
+- Files open directly in ECUMaster software on Windows 10/11
+
+### Why this matters
 - Laptop-free track days
-- Long-term logging with full ECUMaster analysis
-- Seamless workflow between ESP32 and official ECUMaster tools
-
-🛠️ *Implementation details and file format handling will be documented once finalized.*
+- Long-term unattended logging
+- Seamless analysis using official ECUMaster tools
 
 ---
 
-## 🆕 New Functionality – microSD Logging & Bluetooth Stability
+## 💾 microSD Storage Management
 
-### 📀 Automatic microSD Log Recording
+Designed for long-term, hands-off use:
 
-The ESP32 can now record ECU data **directly to a microSD card** without user interaction.
-
-**How it works:**
-
-* Logging starts automatically on **engine start / ECU connection**
-* A **new CSV log file is created for each engine start**
-* Logs are compatible with the included **Online Log Analyzer**
-* Designed for long-term use without manual cleanup
-
-**Storage management:**
-
-* Available free space is continuously monitored
-* When free space drops below **100 MB**, the **oldest log file is automatically deleted**
-* Ensures logging never stops due to a full card
-
-> 💡 Ideal for daily driving, tuning sessions, and track days without needing a laptop.
+- Free space is continuously monitored
+- When free space drops below **100 MB**:
+  - The **oldest log file is automatically deleted**
+- Logging never stops due to a full card
 
 ---
 
-### 🔒 Bluetooth Data Validation (Stability Fix)
+## 🔒 Bluetooth Stability Improvements
 
-Bluetooth data handling has been improved to prevent crashes caused by incomplete or corrupted packets.
+- Incoming Bluetooth packets are **validated before parsing**
+- Corrupted or partial frames are discarded safely
+- Prevents freezes, crashes, or random reboots
+- Handles reconnects cleanly during driving
 
-* Incoming BT data is **validated and sanitized** before parsing
-* Partial or malformed frames are safely discarded
-* Prevents random freezes or reboots during high data throughput
-
-> ✅ Especially important when Bluetooth signal quality is poor or reconnecting mid-stream.
-
----
-
-## 🆕 Peak Value Display & Log Analyzer
-
-The display tracks and shows:
-
-* **Peak Boost Pressure**
-* **Peak Coolant Temperature (CLT)**
-
-These values represent the **highest recorded readings since power-on**, allowing quick review after spirited driving or testing without logging software.
-
-> 💡 Useful for tuning, safety checks, and track sessions.
-
-### 🌐 Online Log Analyzer
-
-* **No-install, browser-based CSV log viewer**
-* **Stacked ECU channels with synced hover cursor**
-* **Quick channel toggling for tuning & diagnostics**
-* Mobile & tablet friendly
+Especially important in noisy RF environments or when reconnecting mid-drive.
 
 ---
 
 ## ✅ Tested On
 
-* ESP32 JC2432W328
-* Active 3.3V buzzer
-* Arduino Core v2.0.17
-* ECUMaster Black with Bluetooth Adapter
-* LVGL v8.3
-* 8GB microSD card (FAT32)
-* EMU Black Software (Client version 2.175) in Microsoft Windows 10/11
+- ESP32 JC2432W328
+- Active 3.3V buzzer
+- Arduino Core **v2.0.17**
+- ECUMaster Black + Bluetooth Adapter
+- ECUMaster Black Software **v2.x** (Windows 10 / 11)
+- LVGL v8.3
+- 8GB microSD card (FAT32)
+
+> ⚠️ **Note:**  
+> If `SerialBT.setPin(pin)` does not work, downgrade to **ESP32 Arduino Core 2.0.17**.  
+> Newer cores removed this feature.
 
 ---
 
 ## 📥 Installation
 
-1. Clone this repo
-2. Install dependencies (LVGL, TFT_eSPI, BluetoothSerial, SD)
-3. Edit LVGL and TFT_eSPI config if needed
-4. Edit the code – set ECU Bluetooth MAC **or** device name & PIN
-5. Copy mono-space fonts (`ui_font_JBM_18.c`, `ui_font_JBM_15.c`, `ui_font_JBM_10.c`) to the project directory
-6. Insert a FAT32-formatted microSD card
+1. Clone this repository
+2. Install dependencies:
+   - LVGL
+   - TFT_eSPI
+   - BluetoothSerial
+   - SD
+3. Configure `lv_conf.h` and `TFT_eSPI` if needed
+4. Set ECU Bluetooth **MAC or device name + PIN**
+5. Copy mono-space fonts:
+   - `ui_font_JBM_18.c`
+   - `ui_font_JBM_15.c`
+   - `ui_font_JBM_10.c`
+6. Insert a **FAT32-formatted** microSD card
 7. Upload to ESP32
-8. *(Optional)* Connect an active 3.0–3.3V buzzer to GPIO **22**
+8. *(Optional)* Connect a 3.0–3.3V active buzzer to GPIO **22**
 9. Pair with ECUMaster Black Bluetooth adapter
-10. Logs are recorded automatically – just drive 🚗
+10. Drive 🚗 — logging starts automatically
 
 ---
 
 ## 📦 Dependencies
 
-* [BluetoothSerial](https://github.com/espressif/arduino-esp32/tree/master/libraries/BluetoothSerial)
-* [LVGL](https://lvgl.io)
-* [TFT_eSPI](https://github.com/Bodmer/TFT_eSPI)
-* [SPI](https://docs.arduino.cc/learn/communication/spi/)
-* [SD](https://docs.arduino.cc/libraries/sd/)
-
----
-
-## 🔍 Log Analyzer (Web)
-
-👉 **Launch Log Analyzer**
-[https://danuecumaster.github.io/ECUMaster-Black-ESP32-Bluetooth-Dashboard-Logger/log_analyzer/](https://danuecumaster.github.io/ECUMaster-Black-ESP32-Bluetooth-Dashboard-Logger/log_analyzer/)
-
-Features:
-
-* Browser-based CSV viewer
-* Multi-channel stacked graphs (MAP, RPM, TPS, AFR, IGN, INJ, CLT, SPD)
-* Synchronized hover cursor across channels
-* Toggle channels on/off
-* Mobile-friendly layout
+- [BluetoothSerial](https://github.com/espressif/arduino-esp32/tree/master/libraries/BluetoothSerial)
+- [LVGL](https://lvgl.io)
+- [TFT_eSPI](https://github.com/Bodmer/TFT_eSPI)
+- [SPI](https://docs.arduino.cc/learn/communication/spi/)
+- [SD](https://docs.arduino.cc/libraries/sd/)
 
 ---
 
 ## ❓ FAQ
 
-**Q:** SerialBT.setPin() doesn't work?
-**A:** Use ESP32 Arduino Core v2.0.17. Later versions removed this feature.
+**Q:** Display not initializing?  
+**A:** Check TFT_eSPI and LVGL configuration.
 
-**Q:** Logs not recording?
-**A:** Check microSD wiring, FAT32 format, and SPI pin configuration.
+**Q:** Logs not recording?  
+**A:** Verify microSD wiring, FAT32 format, and SPI pins.
 
-**Q:** Display not initializing?
-**A:** Check TFT_eSPI & LVGL configuration.
+**Q:** Blurry text?  
+**A:** Check `LV_COLOR_16_SWAP` in `lv_conf.h`.
 
-**Q:** Blurry text?
-**A:** Verify `LV_COLOR_16_SWAP` in `lv_conf.h`.
-
-**Q:** 3D printing material?
-**A:** ABS or ASA recommended for high cabin temperatures.
+**Q:** Recommended 3D printing material?  
+**A:** ABS or ASA (tested for high cabin temperatures).
 
 ---
 
 ## 🧰 Hardware Used
 
-* **ESP32 JC2432W328**
-  [https://www.aliexpress.com/item/1005006729707613.html](https://www.aliexpress.com/item/1005006729707613.html)
-* **3D Printed Case**
-  [https://www.thingiverse.com/thing:6705691](https://www.thingiverse.com/thing:6705691)
-* **ECU**
+- **ESP32 JC2432W328**  
+  https://www.aliexpress.com/item/1005006729707613.html
+
+- **3D Printed Case**  
+  https://www.thingiverse.com/thing:6705691
+
+- **ECU**  
   ECUMaster Black + Bluetooth Adapter
-* **Active 3.3V buzzer**
-  [https://www.aliexpress.com/item/1005008682347898.html](https://www.aliexpress.com/item/1005008682347898.html)
+
+- **Active 3.3V Buzzer**  
+  https://www.aliexpress.com/item/1005008682347898.html
 
 ---
 
@@ -198,7 +189,20 @@ Features:
 
 ![Display](Docs/display.jpg)
 
-[https://youtu.be/EzVEeiy3vmI](https://youtu.be/EzVEeiy3vmI)
+https://youtu.be/EzVEeiy3vmI
+
+---
+
+## 📝 Notes on Log Analysis (v5 Change)
+
+- The **custom online log analyzer used in v5 has been removed**
+- Logs are now written in **native ECUMaster HEX format**
+- Use **ECUMaster Black Software v2.x** for:
+  - Log viewing
+  - Channel math
+  - Overlays & comparisons
+
+This simplifies the workflow and keeps analysis fully within the official ECUMaster ecosystem.
 
 ---
 
@@ -211,4 +215,5 @@ Licensed under **GPL v3**. See `LICENSE` for details.
 ## ❤️ Credits & Contributions
 
 Made with ❤️ for petrolheads.
+
 Forks, pull requests, and feature requests are welcome.
