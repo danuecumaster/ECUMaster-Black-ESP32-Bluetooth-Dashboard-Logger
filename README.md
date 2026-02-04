@@ -208,7 +208,7 @@ This simplifies the workflow and keeps analysis fully within the official ECUMas
 
 ## 📜 License
 
-Licensed under **GPL v3**. See `LICENSE` for details.
+Licensed under the **GNU General Public License v3.0**. See [LICENSE](LICENSE).
 
 ---
 
