@@ -167,6 +167,9 @@ Especially important in noisy RF environments or when reconnecting mid-drive.
 **Q:** Recommended 3D printing material?  
 **A:** ABS or ASA (tested for high cabin temperatures).
 
+**Q:** MicroSD card does not work?
+**A:** Re-format the memory card to FAT32. If it still does not work, try a smaller capacity card (8GB)
+
 ---
 
 ## 🧰 Hardware Used
