@@ -194,7 +194,7 @@ Especially important in noisy RF environments or when reconnecting mid-drive.
 **A:** Re-format the memory card to FAT32. If it still does not work, try a smaller capacity card (8GB)
 
 **Q:** Filenames have incorrect timestamps<br>
-**A:** Force an RTC sync:<br>
+**A:** Force an RTC sync:
 1. Set `#define FORCE_RTC_UPDATE true` and flash the ESP32  
 2. Then set `#define FORCE_RTC_UPDATE false` and flash again  
 
@@ -208,17 +208,23 @@ This updates the RTC with the correct compile-time and restores accurate timesta
 - **ESP32 JC2432W328**  
   https://www.aliexpress.com/item/1005006729707613.html
 
-- **3D Printed Case**  
+- **3D Printed Case #1 for ESP32**  
   https://www.thingiverse.com/thing:6705691
 
-- **ECU**  
-  ECUMaster Black + Bluetooth Adapter
+- **3D Printed Case #2 for RTC**  
+  https://drive.google.com/drive/folders/1Sk4sIXgLAqPZ03BzYb0IwUftMXJ9QMLN?usp=sharing
+
+- **EMU Black (ECU Master Black)** 
+  https://www.ecumaster.com/products/emu-black/
+  
+- **EMU Black CAN Bus Bluetooth Adapter** 
+  https://ecumasterusa.com/products/bluetooth-adapter-for-ecumaster-emu-can-bus
 
 - **Active 3.3V Buzzer**  
   https://www.aliexpress.com/item/1005008682347898.html
 
-- **MicroSD card**  
-  8GB Generic card
+- **MicroSD card (8GB)**  
+  https://www.amazon.com/Micro-Sd-Card-8gb/s?k=Micro+Sd+Card+8gb
   
 - **DS3231 I2C RTC Module**
   https://www.aliexpress.com/item/1005003707505154.html
