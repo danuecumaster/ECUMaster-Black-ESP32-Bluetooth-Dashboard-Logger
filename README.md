@@ -1,5 +1,5 @@
 # 🚗 ECUMaster Black + ESP32 Bluetooth Display & Logger
-### Real-time ECU data, alerts, and native ECUMaster logging
+### Real-time ECU data, alerts, and native ECUMaster logging — no laptop required
 
 [![ESP32](https://img.shields.io/badge/board-ESP32-blue.svg)](https://www.espressif.com/en/products/socs/esp32)
 [![ECUMaster](https://img.shields.io/badge/device-ECUMaster-black.svg)](https://www.ecumaster.com)
@@ -16,27 +16,29 @@
 
 ## 📦 Overview
 
-This project connects an **ECUMaster Black ECU** to an **ESP32** over Bluetooth, creating a compact **standalone ECU display** with:
+This project connects an **ECUMaster Black ECU** to an **ESP32** over Bluetooth, creating a compact **standalone ECU display**.
 
-- Live engine telemetry
+> Designed for track use — reliable, offline, and zero laptop dependency.
+
+- Real-time engine telemetry
 - Driver alerts (visual + buzzer)
 - Peak value tracking
-- Automatic **native ECUMaster-compatible logging**
+- Automatic **native ECUMaster-compatible logging** with accurate RTC-based timestamps
 
 ---
 
 ## ✨ Core Features
 
 ### 🖥️ Live ECU Display
-- Real-time ECU data via Bluetooth
-- LVGL-based TFT GUI (mono-space fonts)
-- Fast refresh, low latency
-- Automatic Bluetooth reconnect
+- Real-time ECU data over Bluetooth
+- LVGL-based TFT interface (monospace fonts)
+- Fast refresh with low latency
+- Automatic Bluetooth reconnection
 
 ### 🚨 Alerts & Threshold Monitoring
-- Visual alerts on screen
-- Optional buzzer alerts
-- CEL warnings
+- On-screen visual alerts
+- Optional buzzer notifications
+- CEL (Check Engine Light) warnings
 - Configurable thresholds for:
   - Coolant temperature
   - RPM
@@ -44,8 +46,9 @@ This project connects an **ECUMaster Black ECU** to an **ESP32** over Bluetooth,
   - Voltage
   - Boost / MAP
   - CEL status
+  - Additional channels (see `Docs/Channel_list.pdf`)
 
-Designed to **keep the driver informed**, not distracted.
+Designed to **keep the driver informed without distraction**.
 
 ---
 
@@ -65,21 +68,24 @@ Useful for:
 
 ## 📀 Native ECUMaster-Compatible Logging
 
-The ESP32 records logs directly to a microSD card in **native ECUMaster Black–compatible format**.
+The ESP32 records logs directly to a microSD card in **native ECUMaster Black–compatible format**, with **accurate RTC-based timestamps**.
 
 - Fully readable by **ECUMaster Black Software v2.x**
 - No CSV conversion
 - No external tools
 - Same workflow as ECU-side logs
+- **Correct file date/time via RTC (DS3231)**
 
 ### How it works
 - Logging starts automatically on **engine start / ECU connection**
 - A **new log file is created for each engine start**
+- Each file is stamped with **real-world date and time**
 - Files open directly in ECUMaster software on Windows 10/11
 
 ### Why this matters
 - Laptop-free track days
 - Long-term unattended logging
+- Chronologically accurate logs for analysis
 - Seamless analysis using official ECUMaster tools
 
 ---
@@ -91,7 +97,7 @@ Designed for long-term, hands-off use:
 - Free space is continuously monitored
 - When free space drops below **100 MB**:
   - The **oldest log file is automatically deleted**
-- Logging never stops due to a full card
+- Logging continues uninterrupted — no full-card failures
 
 ---
 
@@ -106,10 +112,21 @@ Especially important in noisy RF environments or when reconnecting mid-drive.
 
 ---
 
+## 🕒 RTC (Real-Time Clock)
+
+- DS3231 RTC for accurate log timestamps and filenames
+- Battery-backed (CR2032) — retains time when powered off
+- Set once using `FORCE_RTC_UPDATE` (**true** → flash → **false** → reflash)
+
+**Note:** Battery lasts ~2 years. Only needs resetting if the battery is removed or depleted.
+
+---
+
 ## ✅ Tested On
 
 - ESP32 JC2432W328
 - Active 3.3V buzzer
+- DS3231 (AT24C32) I2C RTC module
 - Arduino Core **v2.0.17**
 - ECUMaster Black + Bluetooth Adapter
 - ECUMaster Black Software **v2.x** (Windows 10 / 11)
@@ -130,6 +147,8 @@ Especially important in noisy RF environments or when reconnecting mid-drive.
    - TFT_eSPI
    - BluetoothSerial
    - SD
+   - Wire
+   - RTClib
 3. Configure `lv_conf.h` and `TFT_eSPI` if needed
 4. Set ECU Bluetooth **MAC or device name + PIN**
 5. Copy mono-space fonts:
@@ -138,9 +157,10 @@ Especially important in noisy RF environments or when reconnecting mid-drive.
    - `ui_font_JBM_10.c`
 6. Insert a **FAT32-formatted** microSD card
 7. Upload to ESP32
-8. *(Optional)* Connect a 3.0–3.3V active buzzer to GPIO **22**
-9. Pair with ECUMaster Black Bluetooth adapter
-10. Drive 🚗 — logging starts automatically
+8. *(Optional)* Connect a 3.0–3.3V active buzzer to GPIO **16**
+9. *(Optional)* Connect a RTC module to **I2C pins**
+10. Pair with ECUMaster Black Bluetooth adapter
+11. Drive 🚗 — logging starts automatically
 
 ---
 
@@ -151,6 +171,8 @@ Especially important in noisy RF environments or when reconnecting mid-drive.
 - [TFT_eSPI](https://github.com/Bodmer/TFT_eSPI)
 - [SPI](https://docs.arduino.cc/learn/communication/spi/)
 - [SD](https://docs.arduino.cc/libraries/sd/)
+- [Wire](https://github.com/esp8266/Arduino/blob/master/libraries/Wire/Wire.h)
+- [RTCLIB](https://github.com/adafruit/rtclib)
 
 ---
 
@@ -166,10 +188,18 @@ Especially important in noisy RF environments or when reconnecting mid-drive.
 **A:** Check `LV_COLOR_16_SWAP` in `lv_conf.h`.
 
 **Q:** Recommended 3D printing material?  
-**A:** ABS or ASA (tested for high cabin temperatures).
+**A:** ABS or ASA — **suitable for high cabin temperatures**.
 
 **Q:** MicroSD card does not work?<br>
 **A:** Re-format the memory card to FAT32. If it still does not work, try a smaller capacity card (8GB)
+
+**Q:** Filenames have incorrect timestamps<br>
+**A:** Force an RTC sync:<br>
+1. Set `#define FORCE_RTC_UPDATE true` and flash the ESP32  
+2. Then set `#define FORCE_RTC_UPDATE false` and flash again  
+
+This updates the RTC with the correct compile-time and restores accurate timestamps.
+> Note: This only needs to be done once unless the RTC loses power.
 
 ---
 
@@ -189,6 +219,9 @@ Especially important in noisy RF environments or when reconnecting mid-drive.
 
 - **MicroSD card**  
   8GB Generic card
+  
+- **DS3231 I2C RTC Module**
+  https://www.aliexpress.com/item/1005003707505154.html
  
 ---
 
@@ -200,7 +233,15 @@ Especially important in noisy RF environments or when reconnecting mid-drive.
 
 ---
 
-## 📝 Notes on Log Analysis (v6 Change)
+## 📝 Notes on Log Filenames (v8 Change)
+
+- **v7** uses sequential filenames (e.g. `0001.emualog`, `0002.emualog`) and does **not require an RTC module**.
+- **v8** uses **RTC-based timestamps** to generate filenames with real-world date and time.
+- If you prefer a simpler setup without RTC dependency, v7 remains a valid option.
+
+---
+
+## 📝 Notes on Log Analysis (v7 Change)
 
 - The **custom online log analyzer used in v6 has been removed**
 - Logs are now written in **native ECUMaster HEX format**
