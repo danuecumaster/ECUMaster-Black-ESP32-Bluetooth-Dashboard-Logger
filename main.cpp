@@ -1,4 +1,6 @@
 #include <Arduino.h>
+#include <Wire.h>
+#include "RTClib.h"
 #define LV_COLOR_16_SWAP 0
 #include <lvgl.h>
 #include <TFT_eSPI.h>
@@ -12,9 +14,18 @@ extern const lv_font_t ui_font_JBM_15;
 extern const lv_font_t ui_font_JBM_10;
 using namespace std;
 
-//#define USE_NAME
-const char *pin = "1234"; 				// EMU BLUETOOTH PIN
-String myBtName = "ESP32-BT-Master"; 	// ESP32 BLUETOOTH NAME
+//RTC VIA I2C
+RTC_DS3231 rtc;
+bool rtcAvailable = false;
+#define SDA_PIN 21
+#define SCL_PIN 22
+#define UPLOAD_DELAY_SEC 140       //ADD 2 MINS TO RTC CLOCK SO IT STAYS REATIVELY CORRECT 
+#define FORCE_RTC_UPDATE false     //SET TO TRUE IF YOU WANT TO FORCE RTC SYNC WITHOUT REMOVING THE BATTERY !!!!
+
+//BT SETTINGS
+//#define USE_NAME					  // IF COMMENTED - USE MAC ADDRESS.
+const char *pin = "1234";         	  // EMU BLUETOOTH PIN
+String myBtName = "ESP32-BT-Master";  // ESP32 BLUETOOTH NAME
 
 #if !defined(CONFIG_BT_SPP_ENABLED)
 	#error Serial Bluetooth not available or not enabled. It is only available for the ESP32 chip.
@@ -23,9 +34,9 @@ String myBtName = "ESP32-BT-Master"; 	// ESP32 BLUETOOTH NAME
 BluetoothSerial SerialBT;
 
 #ifdef USE_NAME
-	String slaveName = "EMUCANBT_SPP"; 							 //EMU BLUETOOTH NAME
+	String slaveName = "EMUCANBT_SPP"; //EMU BLUETOOTH NAME
 #else
-	uint8_t address[6] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }; //EMU MAC ADDRESS
+	uint8_t address[6] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }; //EMU MAC ADDRESS - UPDATE THIS !!!!!
 #endif
 
 //SD CARD PINS
@@ -36,21 +47,21 @@ BluetoothSerial SerialBT;
 
 //LOG SETTINGS
 File logFile;
-unsigned long lastLogMillis   	= 0;
-uint32_t logCounter       		= 0;
+unsigned long lastLogMillis     = 0;
+uint32_t logCounter             = 0;
 const unsigned long logInterval = 200;
 const uint64_t MIN_FREE_BYTES   = 100ULL * 1024ULL * 1024ULL; // 100 MB
 static unsigned long lastFlush  = 0;
+uint16_t logIdx         		= 0;
 #define LOG_BUF_SIZE 512
 uint8_t logBuf[LOG_BUF_SIZE];
-uint16_t logIdx = 0;
 
 //FLAGS
 const int backLightPin  = 27;
-const int buzzerPin   	= 22;
-bool buzzerOn       	= false;
-bool btIconSts      	= false;
-bool sdOK        		= false;
+const int buzzerPin     = 16;   //NEW PIN TO ALLOW PIN 22 TO BE USED FOR I2C
+bool buzzerOn           = false;
+bool btIconSts          = false;
+bool sdOK               = false;
 
 static lv_style_t style_bt;
 static lv_style_t style_max0;
@@ -59,7 +70,7 @@ static lv_style_t style_max2;
 static lv_style_t style_max3;
 static bool style_initialized = false;
 
-//VALUE SETUP
+//ECU VALUE SETUP
 int rpm;
 int spd;
 float afr;
@@ -71,10 +82,10 @@ int ign;
 int inj;
 float bat;
 int cel;
-float maxboost  = -100.0f;
-int maxclt   	= -40;
+float maxboost = -100.0f;
+int maxclt     = -40;
 
-unsigned long previousMillis      	  = 0;
+unsigned long previousMillis          = 0;
 const unsigned long reconnectInterval = 5000;
 
 //FONTS
@@ -84,24 +95,66 @@ LV_FONT_DECLARE(ui_font_JBM_18);
 LV_FONT_DECLARE(ui_font_JBM_15);                
 LV_FONT_DECLARE(ui_font_JBM_10);                      
 
+//LABELS
 lv_obj_t *bt_icon_label;
 lv_obj_t *sd_icon_label;
+lv_obj_t *rtc_icon_label;
 lv_obj_t *max_icon_label;  
 lv_obj_t *max_icon_label1;  
 lv_obj_t *max_val_label_clt;
 lv_obj_t *max_val_label_bst;            
 
-// Display & LVGL setup
+// DISPLAY & LVGL SETUP
 TFT_eSPI tft = TFT_eSPI();
 static lv_disp_draw_buf_t draw_buf;
 static lv_color_t buf[LV_HOR_RES_MAX * 20];
 lv_obj_t *table;
 
+//SET RTC TIMESTAMP 
+void setTimestamp() {
+	if (!rtc.begin()) {
+		Serial.println("RTC not found");
+		rtcAvailable = false;
+		return;
+	}
+	
+	rtcAvailable = true;
+	DateTime rtcTime 	 = rtc.now();
+	DateTime compileTime = DateTime(F(__DATE__), F(__TIME__));
+	DateTime adjusted 	 = compileTime + TimeSpan(UPLOAD_DELAY_SEC);
+	if (rtc.lostPower() || FORCE_RTC_UPDATE) {
+		Serial.println("RTC lost power -> setting time");
+		rtc.adjust(adjusted);
+	}
+}
+
+//GET RTC TIMESTAMP
+String getTimestamp() {
+	if (!rtcAvailable) { 
+		update_rtc_icon_color(false); 
+		return ""; 
+	}
+	
+	DateTime now = rtc.now();
+	char buf[20];
+		sprintf(buf,"%04d%02d%02d%02d%02d%02d",
+		now.year(),
+		now.month(),
+		now.day(),
+		now.hour(),
+		now.minute(),
+		now.second()
+	);
+	Serial.println(buf);
+	update_rtc_icon_color(true);
+	return String(buf);
+}
+
 //WRITE LOGS
 void logEMU(uint8_t *frame) {
 	if (!logFile) return;
 
-	// copy 5 bytes into RAM buffer
+	// COPY 5 BYTES INTO RAM BUFFER
 	memcpy(&logBuf[logIdx], frame, 5);
 	logIdx += 5;
 	if (logIdx == LOG_BUF_SIZE) {
@@ -109,7 +162,7 @@ void logEMU(uint8_t *frame) {
 		logIdx = 0;
 	}
 
-	// periodic flush (longer interval = safer BT)
+	// PERIODIC FLUSH (LONGER INTERVAL = SAFER BT)
 	if (millis() - lastFlush > 5000) {
 		if (logIdx > 0) {
 			logFile.write(logBuf, logIdx);
@@ -124,7 +177,7 @@ void logEMU(uint8_t *frame) {
 uint64_t getFreeBytes() {
 	uint64_t total = SD.totalBytes();
 	uint64_t used  = SD.usedBytes();
-	if (total <= used) return 0;
+	if (total <= used) { return 0; }
 	return total - used;
 }
 
@@ -135,31 +188,61 @@ void ensureFreeSpace() {
 		Serial.println("SD space OK");
 		return;
 	}
-	Serial.println("Low SD space, deleting old logs...");
 
-	// Delete from the oldest possible index
-	for (int index = 1; index < 10000 && freeBytes < MIN_FREE_BYTES; index++) {
-		char name[32];
-		sprintf(name, "/log_%04d.emualog", index);
-		if (SD.exists(name)) {
-			File f = SD.open(name);
-			uint32_t size = f ? f.size() : 0;
-			f.close();
-			if (SD.remove(name)) {
-				freeBytes += size;
-				Serial.print("Deleted ");
-				Serial.print(name);
-				Serial.print(" | freed ");
-				Serial.print(size);
-				Serial.println(" bytes");
+	Serial.println("Low SD space, deleting old logs...");
+	while (freeBytes < MIN_FREE_BYTES) {
+		File root         = SD.open("/");
+		uint64_t oldest   = UINT64_MAX;
+		String oldestName = "";
+
+		while (true) {
+			File entry = root.openNextFile();
+			if (!entry) { break; }
+			
+			String name = entry.name();
+			if (name.endsWith(".emualog")) {
+				int dot = name.lastIndexOf('.');
+				String num = name.substring(0, dot);
+				if (num.startsWith("/")) { num = num.substring(1); }
+				if (num.length() == 0 || !isdigit(num[0])) {
+					entry.close();
+					continue;
+				}
+				uint64_t n = strtoull(num.c_str(), NULL, 10);
+				if (n < oldest) {
+					oldest = n;
+					oldestName = name;
+				}
 			}
+			entry.close();
+		}
+		root.close();
+
+		if (oldestName == "") {
+			Serial.println("No logs found");
+			break;
+		}
+
+		String path = oldestName;
+		if (!path.startsWith("/")) { path = "/" + path; }
+
+		File f = SD.open(path);
+		uint32_t size = f ? f.size() : 0;
+		f.close();
+
+		if (SD.remove(path)) {
+			freeBytes += size;
+			Serial.print("Deleted ");
+			Serial.print(path);
+			Serial.print(" | freed ");
+			Serial.println(size);
 		}
 	}
 	Serial.print("Free space after cleanup: ");
 	Serial.println(getFreeBytes());
 }
 
-// LVGL Display Flush Callback
+// LVGL DISPLAY FLUSH CALLBACK
 void my_disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_p) {
 	uint16_t w = area->x2 - area->x1 + 1;
 	uint16_t h = area->y2 - area->y1 + 1;
@@ -170,7 +253,7 @@ void my_disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color
 	lv_disp_flush_ready(disp);
 }
 
-// Initialize LVGL Table
+// INITIALIZE LVGL TABLE
 void create_table() {
 	lv_obj_set_style_bg_color(lv_scr_act(), lv_color_make(30, 30, 30), LV_PART_MAIN);
 
@@ -238,14 +321,19 @@ void setup() {
 	tft.setRotation(1);
 	Serial.begin(1000000);
 
+	//SETUP I2C
+	Wire.begin(SDA_PIN, SCL_PIN);
+	setTimestamp();
+
+	//BUZZER PIN
 	pinMode(buzzerPin, OUTPUT);
 
-	// Initialize LVGL
+	// INITIALIZE LVGL
 	lv_init();
 	lv_refr_now(NULL);
 	lv_disp_draw_buf_init(&draw_buf, buf, NULL, LV_HOR_RES_MAX * 10);
 
-	// Setup LVGL Display Driver
+	// SETUP LVGL DISPLAY DRIVER
 	static lv_disp_drv_t disp_drv;
 	lv_disp_drv_init(&disp_drv);
 	disp_drv.hor_res = 320;
@@ -254,12 +342,13 @@ void setup() {
 	disp_drv.draw_buf = &draw_buf;
 	lv_disp_drv_register(&disp_drv);
 
+	//BT START
 	SerialBT.begin(myBtName, true);
 
 	create_table();
 	digitalWrite(backLightPin, HIGH);
-	connectToBt();
 	setupSD();
+	connectToBt();
 	update_sd_icon_color();
 }
 
@@ -296,9 +385,9 @@ void setupSD() {
 	}
 	ensureFreeSpace();
 
-	// Create new CSV file every boot
+	// CREATE NEW LOG FILE EVERY BOOT
 	String filename = getNextFilename();
-	logFile     	= SD.open(filename, FILE_WRITE);
+	logFile         = SD.open(filename, FILE_WRITE);
 	if (!logFile) {
 		Serial.println("FILE CREATE FAIL");
 		sdOK = false;
@@ -326,18 +415,18 @@ bool readFrame(uint8_t *frame) {
     static uint8_t buf[5];
     static uint8_t idx = 0;
     while (SerialBT.available()) {
-        buf[idx++] = SerialBT.read();
+		buf[idx++] = SerialBT.read();
         if (idx < 5) continue;
 
-        // candidate frame is buf[0..4]
+        // CANDIDATE FRAME IS BUF[0..4]
         uint8_t cs = (buf[0] + buf[1] + buf[2] + buf[3]) & 0xFF;
         if (buf[1] == 0xA3 && cs == buf[4]) {
             memcpy(frame, buf, 5);
-            idx = 0;              // clean reset ONLY on success
+            idx = 0;  // CLEAN RESET ONLY ON SUCCESS
             return true;
         }
-        //resync: slide window by 1 byte
-        memmove(buf, buf + 1, 4);
+        // RESYNC: SLIDE WINDOW BY 1 BYTE
+		memmove(buf, buf + 1, 4);
         idx = 4;
     }
     return false;
@@ -352,7 +441,7 @@ void loop() {
 	unsigned long currentMillis = millis();
 
 	if (!SerialBT.connected()) {
-		// Attempt reconnection every 5 seconds
+		// ATTEMPT RECONNECTION EVERY 5 SECONDS
 		if (currentMillis - previousMillis >= reconnectInterval) {
 			previousMillis = currentMillis;
 			connectToBt();
@@ -361,7 +450,7 @@ void loop() {
 
 	update_bt_icon_color(SerialBT.hasClient(), false);
 
-	// Wait until at least 5 bytes are available
+	// WAIT UNTIL AT LEAST 5 BYTES ARE AVAILABLE
 	while (readFrame(frame)) {
 		logEMU(frame); //WRITE LOG
 
@@ -428,7 +517,7 @@ void loop() {
 			cel = decodeCheckEngine(value);
 		}
 	}
-	
+
 	//BUZZER WARNING
 	buzzerOn = (cel > 0 || clt > 110 || rpm > 7000 || boost > 1.20 || (bat < 11.00 && bat > 1.00));
 	digitalWrite(buzzerPin, (millis() % 600 < 300) && buzzerOn);
@@ -477,7 +566,7 @@ int decodeCheckEngine(uint16_t value) {
 	}
 }
 
-// Cell alignment fix
+// CELL ALIGNMENT FIX
 void my_table_event_cb(lv_event_t * e) {
 	lv_obj_t * table = lv_event_get_target(e);
 	lv_obj_draw_part_dsc_t * dsc = (lv_obj_draw_part_dsc_t *)lv_event_get_param(e);
@@ -486,8 +575,8 @@ void my_table_event_cb(lv_event_t * e) {
 		uint16_t row = dsc->id / lv_table_get_col_cnt(table);
 		uint16_t col = dsc->id % lv_table_get_col_cnt(table);
 
-		dsc->label_dsc->font 	= &ui_font_JBM_18;
-		dsc->label_dsc->align 	= LV_TEXT_ALIGN_CENTER;
+		dsc->label_dsc->font  = &ui_font_JBM_18;
+		dsc->label_dsc->align   = LV_TEXT_ALIGN_CENTER;
 		if ((row == 0 && col == 1) || (row == 0 && col == 3) || (row == 1 && col == 1) || (row == 1 && col == 3) || (row == 2 && col == 1) || (row == 2 && col == 3) || (row == 3 && col == 1) || (row == 3 && col == 3) ||
 		(row == 4 && col == 1) || (row == 4 && col == 2)) {
 			dsc->label_dsc->align = LV_TEXT_ALIGN_RIGHT;
@@ -579,10 +668,19 @@ void update_bt_icon_color(bool is_connected, bool firstTime) {
 //UPDATE SD ICON
 void update_sd_icon_color() {
 	if (!sd_icon_label) { return; }
+	
 	if (sdOK) { 
 		lv_obj_set_style_text_color(sd_icon_label, lv_color_make(0,255,0), 0); 
 	} else { 
 		lv_obj_set_style_text_color(sd_icon_label, lv_color_make(0,0,255), 0); 
+	}
+}
+
+void update_rtc_icon_color(bool status) {
+	if (status) { 
+		lv_obj_set_style_text_color(rtc_icon_label, lv_color_make(0,255,0), 0); 
+	} else { 
+		lv_obj_set_style_text_color(rtc_icon_label, lv_color_make(0,0,255), 0); 
 	}
 }
 
@@ -598,6 +696,11 @@ void create_bt_icon() {
 	lv_label_set_text(sd_icon_label, LV_SYMBOL_SAVE); // storage icon
 	lv_obj_set_style_text_font(sd_icon_label, &lv_font_montserrat_28, LV_PART_MAIN);
 	lv_obj_align(sd_icon_label, LV_ALIGN_BOTTOM_RIGHT, -30, -5);
+
+	rtc_icon_label = lv_label_create(lv_scr_act());
+	lv_label_set_text(rtc_icon_label, LV_SYMBOL_BELL); // time icon
+	lv_obj_set_style_text_font(rtc_icon_label, &lv_font_montserrat_28, LV_PART_MAIN);
+	lv_obj_align(rtc_icon_label, LV_ALIGN_BOTTOM_RIGHT, -60, -5);
 
 	max_icon_label = lv_label_create(lv_scr_act());
 	lv_label_set_text(max_icon_label, "CLT                BOOST");
@@ -634,13 +737,40 @@ void create_bt_icon() {
 
 //GET NEXT FILE NAME
 String getNextFilename() {
-	int index = 1;
-	char name[32];
-	while (true) {
-		sprintf(name, "/log_%04d.emualog", index);
-		if (!SD.exists(name)) {
-			return String(name);
+	String ts = getTimestamp();
+	// RTC WORKING
+	if (ts.length() > 0) {
+		String filename = "/" + ts + ".emualog";
+		if (!SD.exists(filename)) {
+			return filename;
 		}
-		index++;
+		uint64_t t = strtoull(ts.c_str(), NULL, 10);
+		while (true) {
+			t++;
+			String name = "/" + String(t) + ".emualog";
+			if (!SD.exists(name)) {
+				return name;
+			}
+		}
 	}
+
+	// RTC MISSING -> FIND LAST FILE
+	File root = SD.open("/");
+	uint64_t last = 0;
+	while (true) {
+		File entry = root.openNextFile();
+		if (!entry) { break; }
+		String name = entry.name();
+		if (name.endsWith(".emualog")) {
+			int dot = name.lastIndexOf('.');
+			String num = name.substring(0, dot);
+			if (num.startsWith("/")) { num = num.substring(1); }
+			uint64_t n = strtoull(num.c_str(), NULL, 10);
+			if (n > last) { last = n; }
+		}
+		entry.close();
+	}
+	root.close();
+	if (last == 0) { return "/1.emualog"; }
+	return "/" + String(last + 1) + ".emualog";
 }
