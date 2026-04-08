@@ -10,6 +10,7 @@
 [![Language: C++](https://img.shields.io/badge/language-C++-orange.svg)](https://isocpp.org)
 [![Vehicle Telemetry](https://img.shields.io/badge/type-Telemetry-lightgrey.svg)]()
 [![Data Logging](https://img.shields.io/badge/feature-Native%20Logging-green.svg)]()
+[![RTC](https://img.shields.io/badge/feature-RTC%20Clock-orange.svg)]()
 
 ---
 
