@@ -1,5 +1,5 @@
 # 🚗 ECUMaster Black + ESP32 Bluetooth Display & Logger
-### Real-time ECU data, alerts, and native ECUMaster logging — no laptop required
+### Real-time ECU data, alerts, and native ECUMaster logging - no laptop required
 
 [![ESP32](https://img.shields.io/badge/board-ESP32-blue.svg)](https://www.espressif.com/en/products/socs/esp32)
 [![ECUMaster](https://img.shields.io/badge/device-ECUMaster-black.svg)](https://www.ecumaster.com)
@@ -18,7 +18,7 @@
 
 This project connects an **ECUMaster Black ECU** to an **ESP32** over Bluetooth, creating a compact **standalone ECU display**.
 
-> Designed for track use — reliable, offline, and zero laptop dependency.
+> Designed for track use - reliable, offline, and zero laptop dependency.
 
 - Real-time engine telemetry
 - Driver alerts (visual + buzzer)
@@ -97,7 +97,7 @@ Designed for long-term, hands-off use:
 - Free space is continuously monitored
 - When free space drops below **100 MB**:
   - The **oldest log file is automatically deleted**
-- Logging continues uninterrupted — no full-card failures
+- Logging continues uninterrupted - no full-card failures
 
 ---
 
@@ -115,7 +115,7 @@ Especially important in noisy RF environments or when reconnecting mid-drive.
 ## 🕒 RTC (Real-Time Clock)
 
 - DS3231 RTC for accurate log timestamps and filenames
-- Battery-backed (CR2032) — retains time when powered off
+- Battery-backed (CR2032) - retains time when powered off
 - Set once using `FORCE_RTC_UPDATE` (**true** → flash → **false** → reflash)
 
 **Note:** Battery lasts ~2 years. Only needs resetting if the battery is removed or depleted.
@@ -160,7 +160,7 @@ Especially important in noisy RF environments or when reconnecting mid-drive.
 8. *(Optional)* Connect a 3.0–3.3V active buzzer to GPIO **16**
 9. *(Optional)* Connect a RTC module to **I2C pins**
 10. Pair with ECUMaster Black Bluetooth adapter
-11. Drive 🚗 — logging starts automatically
+11. Drive 🚗 - logging starts automatically
 
 ---
 
@@ -188,7 +188,7 @@ Especially important in noisy RF environments or when reconnecting mid-drive.
 **A:** Check `LV_COLOR_16_SWAP` in `lv_conf.h`.
 
 **Q:** Recommended 3D printing material?  
-**A:** ABS or ASA — **suitable for high cabin temperatures**.
+**A:** ABS or ASA - **suitable for high cabin temperatures**.
 
 **Q:** MicroSD card does not work?<br>
 **A:** Re-format the memory card to FAT32. If it still does not work, try a smaller capacity card (8GB)
