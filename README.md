@@ -201,7 +201,7 @@ Especially important in noisy RF environments or when reconnecting mid-drive.
 
 ## 📝 Notes on Log Analysis (v5 Change)
 
-- The **custom online log analyzer used in v5 has been removed**
+- The **custom online log analyzer used in v6 has been removed**
 - Logs are now written in **native ECUMaster HEX format**
 - Use **ECUMaster Black Software v2.x** for:
   - Log viewing
