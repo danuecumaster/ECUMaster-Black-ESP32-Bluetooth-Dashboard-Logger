@@ -1,0 +1,2 @@
+DS3231 or any I2C RTC Module.
+Example: https://www.aliexpress.com/item/1005003707505154.html (DS3231 AT24C32 IIC Precision RTC Real Time Clock Memory Module RTC DS3231SN Memory module)

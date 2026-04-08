@@ -4,7 +4,7 @@ Example: https://www.aliexpress.com/item/1005006729707613.html
 Documentation: https://drive.google.com/drive/folders/1Sk4sIXgLAqPZ03BzYb0IwUftMXJ9QMLN?usp=sharing
 
 ###
-3D Printed Case
+3D Printed Case #1 for the ESP32
 If JC2432W328 - https://www.thingiverse.com/thing:6705691
 
 ###
@@ -17,4 +17,10 @@ ECUMaster Black - https://www.ecumaster.com/products/emu-black/
 ###
 EMU CAN Bluetooth Adapter - https://ecumasterusa.com/products/bluetooth-adapter-for-ecumaster-emu-can-bus
 
+###
+DS3231 RTC Module
+Example: https://www.aliexpress.com/item/1005003707505154.html
+
+###
+3D Printed Case #2 for the RTC - https://drive.google.com/file/d/1MEJ4LIrxY39ujAgtq9f_r91kAx5oW17X/view?usp=sharing
 
