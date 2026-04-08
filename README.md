@@ -223,7 +223,7 @@ This updates the RTC with the correct compile-time and restores accurate timesta
 - **Active 3.3V Buzzer**<br>
   https://www.aliexpress.com/item/1005008682347898.html
 
-- **MicroSD card (8GB)**<br>  
+- **MicroSD card (8GB)**<br>
   https://www.amazon.com/Micro-Sd-Card-8gb/s?k=Micro+Sd+Card+8gb
   
 - **DS3231 I2C RTC Module**<br>
