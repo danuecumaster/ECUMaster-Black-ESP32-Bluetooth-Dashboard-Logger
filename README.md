@@ -205,28 +205,28 @@ This updates the RTC with the correct compile-time and restores accurate timesta
 
 ## 🧰 Hardware Used
 
-- **ESP32 JC2432W328**  
+- **ESP32 JC2432W328**<br>
   https://www.aliexpress.com/item/1005006729707613.html
 
-- **3D Printed Case #1 for ESP32**  
+- **3D Printed Case #1 for ESP32**<br>
   https://www.thingiverse.com/thing:6705691
 
-- **3D Printed Case #2 for RTC**  
+- **3D Printed Case #2 for RTC**<br> 
   https://drive.google.com/drive/folders/1Sk4sIXgLAqPZ03BzYb0IwUftMXJ9QMLN?usp=sharing
 
-- **EMU Black (ECU Master Black)** 
+- **EMU Black (ECU Master Black)**<br>
   https://www.ecumaster.com/products/emu-black/
   
-- **EMU Black CAN Bus Bluetooth Adapter** 
+- **EMU Black CAN Bus Bluetooth Adapter**<br> 
   https://ecumasterusa.com/products/bluetooth-adapter-for-ecumaster-emu-can-bus
 
-- **Active 3.3V Buzzer**  
+- **Active 3.3V Buzzer**<br>
   https://www.aliexpress.com/item/1005008682347898.html
 
-- **MicroSD card (8GB)**  
+- **MicroSD card (8GB)**<br>  
   https://www.amazon.com/Micro-Sd-Card-8gb/s?k=Micro+Sd+Card+8gb
   
-- **DS3231 I2C RTC Module**
+- **DS3231 I2C RTC Module**<br>
   https://www.aliexpress.com/item/1005003707505154.html
  
 ---
