@@ -19,12 +19,12 @@ RTC_DS3231 rtc;
 bool rtcAvailable = false;
 #define SDA_PIN 21
 #define SCL_PIN 22
-#define UPLOAD_DELAY_SEC 140       //ADD 2 MINS TO RTC CLOCK SO IT STAYS REATIVELY CORRECT 
-#define FORCE_RTC_UPDATE false     //SET TO TRUE IF YOU WANT TO FORCE RTC SYNC WITHOUT REMOVING THE BATTERY !!!!
+#define UPLOAD_DELAY_SEC 140       //Add 2 mins to RTC clock so it stays reatively correct 
+#define FORCE_RTC_UPDATE false     //Set to true if you want to force RTC sync without removing the battery
 
 //BT SETTINGS
-//#define USE_NAME					  // IF COMMENTED - USE MAC ADDRESS.
-const char *pin = "1234";         	  // EMU BLUETOOTH PIN
+//#define USE_NAME
+const char *pin = "1234";             // EMU BLUETOOTH PIN
 String myBtName = "ESP32-BT-Master";  // ESP32 BLUETOOTH NAME
 
 #if !defined(CONFIG_BT_SPP_ENABLED)
@@ -36,7 +36,7 @@ BluetoothSerial SerialBT;
 #ifdef USE_NAME
 	String slaveName = "EMUCANBT_SPP"; //EMU BLUETOOTH NAME
 #else
-	uint8_t address[6] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }; //EMU MAC ADDRESS - UPDATE THIS !!!!!
+	uint8_t address[6] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }; //EMU MAC ADDRESS
 #endif
 
 //SD CARD PINS
@@ -46,20 +46,23 @@ BluetoothSerial SerialBT;
 #define CS   5
 
 //LOG SETTINGS
+#define LOG_BUF_SIZE 512
 File logFile;
 unsigned long lastLogMillis     = 0;
 uint32_t logCounter             = 0;
 const unsigned long logInterval = 200;
 const uint64_t MIN_FREE_BYTES   = 100ULL * 1024ULL * 1024ULL; // 100 MB
 static unsigned long lastFlush  = 0;
-uint16_t logIdx         		= 0;
-#define LOG_BUF_SIZE 512
+uint16_t logIdx             	= 0;
 uint8_t logBuf[LOG_BUF_SIZE];
 
 //FLAGS
 const int backLightPin  = 27;
 const int buzzerPin     = 16;   //NEW PIN TO ALLOW PIN 22 TO BE USED FOR I2C
+const int ledPin1       = 4; 
+const int ledPin2       = 17; 
 bool buzzerOn           = false;
+bool buzzWindow     	= false;
 bool btIconSts          = false;
 bool sdOK               = false;
 
@@ -117,11 +120,11 @@ void setTimestamp() {
 		rtcAvailable = false;
 		return;
 	}
-	
+
 	rtcAvailable = true;
-	DateTime rtcTime 	 = rtc.now();
+	DateTime rtcTime   = rtc.now();
 	DateTime compileTime = DateTime(F(__DATE__), F(__TIME__));
-	DateTime adjusted 	 = compileTime + TimeSpan(UPLOAD_DELAY_SEC);
+	DateTime adjusted    = compileTime + TimeSpan(UPLOAD_DELAY_SEC);
 	if (rtc.lostPower() || FORCE_RTC_UPDATE) {
 		Serial.println("RTC lost power -> setting time");
 		rtc.adjust(adjusted);
@@ -134,10 +137,10 @@ String getTimestamp() {
 		update_rtc_icon_color(false); 
 		return ""; 
 	}
-	
+
 	DateTime now = rtc.now();
 	char buf[20];
-		sprintf(buf,"%04d%02d%02d%02d%02d%02d",
+	sprintf(buf,"%04d%02d%02d%02d%02d%02d",
 		now.year(),
 		now.month(),
 		now.day(),
@@ -154,7 +157,7 @@ String getTimestamp() {
 void logEMU(uint8_t *frame) {
 	if (!logFile) return;
 
-	// COPY 5 BYTES INTO RAM BUFFER
+	// copy 5 bytes into RAM buffer
 	memcpy(&logBuf[logIdx], frame, 5);
 	logIdx += 5;
 	if (logIdx == LOG_BUF_SIZE) {
@@ -162,7 +165,7 @@ void logEMU(uint8_t *frame) {
 		logIdx = 0;
 	}
 
-	// PERIODIC FLUSH (LONGER INTERVAL = SAFER BT)
+	// periodic flush (longer interval = safer BT)
 	if (millis() - lastFlush > 5000) {
 		if (logIdx > 0) {
 			logFile.write(logBuf, logIdx);
@@ -198,7 +201,7 @@ void ensureFreeSpace() {
 		while (true) {
 			File entry = root.openNextFile();
 			if (!entry) { break; }
-			
+
 			String name = entry.name();
 			if (name.endsWith(".emualog")) {
 				int dot = name.lastIndexOf('.');
@@ -313,6 +316,8 @@ void create_table() {
 
 //ESP32 SETUP
 void setup() {
+	setCpuFrequencyMhz(240);
+	
 	tft.init();
 	pinMode(backLightPin, OUTPUT);
 	digitalWrite(backLightPin, LOW);
@@ -325,8 +330,10 @@ void setup() {
 	Wire.begin(SDA_PIN, SCL_PIN);
 	setTimestamp();
 
-	//BUZZER PIN
-	pinMode(buzzerPin, OUTPUT);
+	//BUZZER-LED PIN Hack
+	pinMode(buzzerPin, INPUT);
+	pinMode(ledPin1, INPUT);
+	pinMode(ledPin2, INPUT);
 
 	// INITIALIZE LVGL
 	lv_init();
@@ -385,7 +392,7 @@ void setupSD() {
 	}
 	ensureFreeSpace();
 
-	// CREATE NEW LOG FILE EVERY BOOT
+	// Create new CSV file every boot
 	String filename = getNextFilename();
 	logFile         = SD.open(filename, FILE_WRITE);
 	if (!logFile) {
@@ -412,24 +419,24 @@ static char buf_max_boost[32];
 
 //READ BT DATA STREAM
 bool readFrame(uint8_t *frame) {
-    static uint8_t buf[5];
-    static uint8_t idx = 0;
-    while (SerialBT.available()) {
+	static uint8_t buf[5];
+	static uint8_t idx = 0;
+	while (SerialBT.available()) {
 		buf[idx++] = SerialBT.read();
-        if (idx < 5) continue;
+		if (idx < 5) continue;
 
-        // CANDIDATE FRAME IS BUF[0..4]
-        uint8_t cs = (buf[0] + buf[1] + buf[2] + buf[3]) & 0xFF;
-        if (buf[1] == 0xA3 && cs == buf[4]) {
-            memcpy(frame, buf, 5);
-            idx = 0;  // CLEAN RESET ONLY ON SUCCESS
-            return true;
-        }
-        // RESYNC: SLIDE WINDOW BY 1 BYTE
+		// candidate frame is buf[0..4]
+		uint8_t cs = (buf[0] + buf[1] + buf[2] + buf[3]) & 0xFF;
+		if (buf[1] == 0xA3 && cs == buf[4]) {
+			memcpy(frame, buf, 5);
+			idx = 0;              // clean reset ONLY on success
+			return true;
+		}
+		//resync: slide window by 1 byte
 		memmove(buf, buf + 1, 4);
-        idx = 4;
-    }
-    return false;
+		idx = 4;
+	}
+	return false;
 }
 
 //ESP32 LOOP
@@ -441,7 +448,7 @@ void loop() {
 	unsigned long currentMillis = millis();
 
 	if (!SerialBT.connected()) {
-		// ATTEMPT RECONNECTION EVERY 5 SECONDS
+		// Attempt reconnection every 5 seconds
 		if (currentMillis - previousMillis >= reconnectInterval) {
 			previousMillis = currentMillis;
 			connectToBt();
@@ -450,7 +457,7 @@ void loop() {
 
 	update_bt_icon_color(SerialBT.hasClient(), false);
 
-	// WAIT UNTIL AT LEAST 5 BYTES ARE AVAILABLE
+	// Wait until at least 5 bytes are available
 	while (readFrame(frame)) {
 		logEMU(frame); //WRITE LOG
 
@@ -519,8 +526,14 @@ void loop() {
 	}
 
 	//BUZZER WARNING
-	buzzerOn = (cel > 0 || clt > 110 || rpm > 7000 || boost > 1.20 || (bat < 11.00 && bat > 1.00));
-	digitalWrite(buzzerPin, (millis() % 600 < 300) && buzzerOn);
+	buzzerOn = (cel > 0 || clt > 110 || rpm > 7000 || boost > 1.20 || (bat < 11.00 && bat > 1.00)); 
+	buzzWindow = buzzerOn && (millis() % 600 < 300);
+	if (buzzWindow) {
+		pinMode(buzzerPin, OUTPUT);
+		digitalWrite(buzzerPin, millis() % 2);
+	} else {
+		pinMode(buzzerPin, INPUT);
+	}
 
 	lv_obj_invalidate(table);
 	lv_timer_handler();
@@ -528,7 +541,8 @@ void loop() {
 
 //CEL DECODE
 int decodeCheckEngine(uint16_t value) {
-	int cel_codes = 0; string cel_names = "";
+	int cel_codes 	 = 0; 
+	string cel_names = "";
 	if (value == 0) {
 		return 0;
 	}
@@ -668,7 +682,7 @@ void update_bt_icon_color(bool is_connected, bool firstTime) {
 //UPDATE SD ICON
 void update_sd_icon_color() {
 	if (!sd_icon_label) { return; }
-	
+
 	if (sdOK) { 
 		lv_obj_set_style_text_color(sd_icon_label, lv_color_make(0,255,0), 0); 
 	} else { 
@@ -738,7 +752,7 @@ void create_bt_icon() {
 //GET NEXT FILE NAME
 String getNextFilename() {
 	String ts = getTimestamp();
-	// RTC WORKING
+	// RTC working
 	if (ts.length() > 0) {
 		String filename = "/" + ts + ".emualog";
 		if (!SD.exists(filename)) {
@@ -754,7 +768,7 @@ String getNextFilename() {
 		}
 	}
 
-	// RTC MISSING -> FIND LAST FILE
+	// RTC missing -> find last file
 	File root = SD.open("/");
 	uint64_t last = 0;
 	while (true) {
