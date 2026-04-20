@@ -19,8 +19,8 @@ RTC_DS3231 rtc;
 bool rtcAvailable = false;
 #define SDA_PIN 21
 #define SCL_PIN 22
-#define UPLOAD_DELAY_SEC 140       //Add 2 mins to RTC clock so it stays reatively correct 
-#define FORCE_RTC_UPDATE false     //Set to true if you want to force RTC sync without removing the battery
+#define UPLOAD_DELAY_SEC 140       //ADD 2 MINS TO RTC CLOCK SO IT STAYS REATIVELY CORRECT 
+#define FORCE_RTC_UPDATE false     //SET TO TRUE IF YOU WANT TO FORCE RTC SYNC WITHOUT REMOVING THE BATTERY
 
 //BT SETTINGS
 //#define USE_NAME
@@ -157,7 +157,7 @@ String getTimestamp() {
 void logEMU(uint8_t *frame) {
 	if (!logFile) return;
 
-	// copy 5 bytes into RAM buffer
+	// COPY 5 BYTES INTO RAM BUFFER
 	memcpy(&logBuf[logIdx], frame, 5);
 	logIdx += 5;
 	if (logIdx == LOG_BUF_SIZE) {
@@ -165,7 +165,7 @@ void logEMU(uint8_t *frame) {
 		logIdx = 0;
 	}
 
-	// periodic flush (longer interval = safer BT)
+	// PERIODIC FLUSH (LONGER INTERVAL = SAFER BT)
 	if (millis() - lastFlush > 5000) {
 		if (logIdx > 0) {
 			logFile.write(logBuf, logIdx);
@@ -330,7 +330,7 @@ void setup() {
 	Wire.begin(SDA_PIN, SCL_PIN);
 	setTimestamp();
 
-	//BUZZER-LED PIN Hack
+	//BUZZER-LED PIN HACK
 	pinMode(buzzerPin, INPUT);
 	pinMode(ledPin1, INPUT);
 	pinMode(ledPin2, INPUT);
@@ -392,7 +392,7 @@ void setupSD() {
 	}
 	ensureFreeSpace();
 
-	// Create new CSV file every boot
+	// CREATE NEW CSV FILE EVERY BOOT
 	String filename = getNextFilename();
 	logFile         = SD.open(filename, FILE_WRITE);
 	if (!logFile) {
@@ -425,14 +425,14 @@ bool readFrame(uint8_t *frame) {
 		buf[idx++] = SerialBT.read();
 		if (idx < 5) continue;
 
-		// candidate frame is buf[0..4]
+		// CANDIDATE FRAME IS BUF[0..4]
 		uint8_t cs = (buf[0] + buf[1] + buf[2] + buf[3]) & 0xFF;
 		if (buf[1] == 0xA3 && cs == buf[4]) {
 			memcpy(frame, buf, 5);
-			idx = 0;              // clean reset ONLY on success
+			idx = 0;	// CLEAN RESET ONLY ON SUCCESS
 			return true;
 		}
-		//resync: slide window by 1 byte
+		//RESYNC: SLIDE WINDOW BY 1 BYTE
 		memmove(buf, buf + 1, 4);
 		idx = 4;
 	}
@@ -448,7 +448,7 @@ void loop() {
 	unsigned long currentMillis = millis();
 
 	if (!SerialBT.connected()) {
-		// Attempt reconnection every 5 seconds
+		// ATTEMPT RECONNECTION EVERY 5 SECONDS
 		if (currentMillis - previousMillis >= reconnectInterval) {
 			previousMillis = currentMillis;
 			connectToBt();
@@ -457,7 +457,7 @@ void loop() {
 
 	update_bt_icon_color(SerialBT.hasClient(), false);
 
-	// Wait until at least 5 bytes are available
+	// WAIT UNTIL AT LEAST 5 BYTES ARE AVAILABLE
 	while (readFrame(frame)) {
 		logEMU(frame); //WRITE LOG
 
@@ -606,23 +606,23 @@ static void table_event_cb_bg(lv_event_t *e) {
 	lv_obj_t *table = lv_event_get_target(e);
 	lv_obj_draw_part_dsc_t *dsc = (lv_obj_draw_part_dsc_t *)lv_event_get_param(e);
 
-	// Ensure dsc and rect_dsc are valid
+	// ENSURE DSC AND RECT_DSC ARE VALID
 	if (!dsc || !dsc->rect_dsc) return;
 
-	// Only modify table cell backgrounds
+	// ONLY MODIFY TABLE CELL BACKGROUNDS
 	if (dsc->part == LV_PART_ITEMS) {
 		uint16_t row = dsc->id / lv_table_get_col_cnt(table);
 		uint16_t col = dsc->id % lv_table_get_col_cnt(table);
 
 		const char *value_str = lv_table_get_cell_value(table, row, col);
 
-		// Check if value_str is null or empty before conversion
+		// CHECK IF VALUE_STR IS NULL OR EMPTY BEFORE CONVERSION
 		float value = 0.0f;
 		if (value_str && value_str[0] != '\0') {
 			value = atof(value_str);
 		}
 
-		// Default cell color
+		// DEFAULT CELL COLOR
 		lv_color_t bg_color = lv_color_make(30, 30, 30);
 		lv_color_t text_color = lv_color_white();
 
@@ -655,7 +655,7 @@ static void table_event_cb_bg(lv_event_t *e) {
 			text_color = lv_color_white();
 		}
 
-		// Apply background color to the cell
+		// APPLY BACKGROUND COLOR TO THE CELL
 		dsc->rect_dsc->bg_color = bg_color;
 		dsc->rect_dsc->bg_opa = LV_OPA_COVER;
 		dsc->label_dsc->color = text_color;
@@ -752,7 +752,7 @@ void create_bt_icon() {
 //GET NEXT FILE NAME
 String getNextFilename() {
 	String ts = getTimestamp();
-	// RTC working
+	// RTC WORKING
 	if (ts.length() > 0) {
 		String filename = "/" + ts + ".emualog";
 		if (!SD.exists(filename)) {
@@ -768,7 +768,7 @@ String getNextFilename() {
 		}
 	}
 
-	// RTC missing -> find last file
+	// RTC MISSING -> FIND LAST FILE
 	File root = SD.open("/");
 	uint64_t last = 0;
 	while (true) {
