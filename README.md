@@ -150,7 +150,7 @@ Especially important in noisy RF environments or when reconnecting mid-drive.
    - Wire
    - RTClib
 3. Configure `lv_conf.h` and `TFT_eSPI` if needed
-4. Set ECU Bluetooth **MAC ADDRESS or device name + PIN + uncomment `#define USE_NAME`**
+4. Set ECU Bluetooth **MAC ADDRESS** or **`slaveName` + `pin` + uncomment `#define USE_NAME`**
 5. Copy mono-space fonts:
    - `ui_font_JBM_18.c`
    - `ui_font_JBM_15.c`
