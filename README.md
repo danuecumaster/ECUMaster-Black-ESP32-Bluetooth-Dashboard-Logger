@@ -150,7 +150,7 @@ Especially important in noisy RF environments or when reconnecting mid-drive.
    - Wire
    - RTClib
 3. Configure `lv_conf.h` and `TFT_eSPI` if needed
-4. Set ECU Bluetooth **MAC or device name + PIN**
+4. Set ECU Bluetooth **MAC ADDRESS or device name + PIN + uncomment `#define USE_NAME`**
 5. Copy mono-space fonts:
    - `ui_font_JBM_18.c`
    - `ui_font_JBM_15.c`
@@ -233,7 +233,7 @@ This updates the RTC with the correct compile-time and restores accurate timesta
 
 ## 📺 Demo
 
-![Display](Docs/display.jpg)
+![Display](https://raw.githubusercontent.com/danuecumaster/ECUMaster-Black-ESP32-Bluetooth-Dashboard-Logger/main/Docs/display.jpg)
 
 [YouTube](https://youtu.be/EzVEeiy3vmI)
 
