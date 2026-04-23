@@ -1,4 +1,4 @@
-# 🚗 ECUMaster (EMU Black/Classic) + ESP32 Bluetooth Display & Logger
+# 🚗 ECUMaster ESP32 Bluetooth Display & Logger
 ### Real-time ECU data, alerts, and native ECUMaster logging - no laptop required
 
 [![ESP32](https://img.shields.io/badge/board-ESP32-blue.svg)](https://www.espressif.com/en/products/socs/esp32)
