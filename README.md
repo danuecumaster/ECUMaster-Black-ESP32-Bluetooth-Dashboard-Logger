@@ -1,4 +1,4 @@
-# 🚗 ECUMaster Black + ESP32 Bluetooth Display & Logger
+# 🚗 ECUMaster (EMU Black/Classic) + ESP32 Bluetooth Display & Logger
 ### Real-time ECU data, alerts, and native ECUMaster logging - no laptop required
 
 [![ESP32](https://img.shields.io/badge/board-ESP32-blue.svg)](https://www.espressif.com/en/products/socs/esp32)
@@ -16,7 +16,7 @@
 
 ## 📦 Overview
 
-This project connects an **ECUMaster Black ECU** to an **ESP32** over Bluetooth, creating a compact **standalone ECU display**.
+This project connects an **ECUMaster (EMU Black/Classic) ECU** to an **ESP32** over Bluetooth, creating a compact **standalone ECU display**.
 
 > Designed for track use - reliable, offline, and zero laptop dependency.
 
@@ -68,9 +68,9 @@ Useful for:
 
 ## 📀 Native ECUMaster-Compatible Logging
 
-The ESP32 records logs directly to a microSD card in **native ECUMaster Black–compatible format**, with **accurate RTC-based timestamps**.
+The ESP32 records logs directly to a microSD card in **native ECUMaster compatible format**, with **accurate RTC-based timestamps**.
 
-- Fully readable by **ECUMaster Black Software v2.x**
+- Fully readable by **ECUMaster Software v2.x**
 - No CSV conversion
 - No external tools
 - Same workflow as ECU-side logs
@@ -159,7 +159,7 @@ Especially important in noisy RF environments or when reconnecting mid-drive.
 7. Upload to ESP32
 8. *(Optional)* Connect a 3.0–3.3V active buzzer to GPIO **16**
 9. *(Optional)* Connect a RTC module to **I2C pins**
-10. Pair with ECUMaster Black Bluetooth adapter
+10. Pair with ECUMaster Bluetooth adapter
 11. Drive 🚗 - logging starts automatically
 
 ---
@@ -217,7 +217,7 @@ This updates the RTC with the correct compile-time and restores accurate timesta
 - **EMU Black (ECU Master Black)**<br>
   https://www.ecumaster.com/products/emu-black/
   
-- **EMU Black CAN Bus Bluetooth Adapter**<br> 
+- **EMU CAN Bus Bluetooth Adapter**<br> 
   https://ecumasterusa.com/products/bluetooth-adapter-for-ecumaster-emu-can-bus
 
 - **Active 3.3V Buzzer**<br>
@@ -233,7 +233,7 @@ This updates the RTC with the correct compile-time and restores accurate timesta
 
 ## 📺 Demo
 
-![Display](https://raw.githubusercontent.com/danuecumaster/ECUMaster-Black-ESP32-Bluetooth-Dashboard-Logger/main/Docs/display.jpg)
+![Display](https://raw.githubusercontent.com/danuecumaster/ECUMaster-ESP32-Bluetooth-Dashboard-Logger/main/Docs/display.jpg)
 
 [YouTube](https://youtu.be/EzVEeiy3vmI)
 
@@ -251,7 +251,7 @@ This updates the RTC with the correct compile-time and restores accurate timesta
 
 - The **custom online log analyzer used in v6 has been removed**
 - Logs are now written in **native ECUMaster HEX format**
-- Use **ECUMaster Black Software v2.x** for:
+- Use **ECUMaster Software v2.x** for:
   - Log viewing
   - Channel math
   - Overlays & comparisons
@@ -262,7 +262,7 @@ This simplifies the workflow and keeps analysis fully within the official ECUMas
 
 ## 📜 License
 
-Licensed under the **GNU General Public License v3.0**. See [LICENSE](https://github.com/danuecumaster/ECUMaster-Black-ESP32-Bluetooth-Dashboard-Logger/wiki/LICENSE).
+Licensed under the **GNU General Public License v3.0**. See [LICENSE](https://github.com/danuecumaster/ECUMaster-ESP32-Bluetooth-Dashboard-Logger/wiki/LICENSE).
 
 ---
 
