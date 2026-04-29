@@ -48,8 +48,6 @@ This project connects an **ECUMaster (EMU Black/Classic) ECU** to an **ESP32** o
   - CEL status
   - Additional channels (see `Docs/Channel_list.pdf`)
 
-Designed to **keep the driver informed without distraction**.
-
 ---
 
 ## 📊 Peak Value Tracking
