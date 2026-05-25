@@ -204,7 +204,7 @@ This updates the RTC with the correct compile-time and restores accurate timesta
 ## 🧰 Hardware Used
 
 - **ESP32 JC2432W328**<br>
-  https://www.aliexpress.com/item/1005006729707613.html
+  https://www.aliexpress.com/w/wholesale-JC2432W328.html
 
 - **3D Printed Case #1 for ESP32**<br>
   https://www.thingiverse.com/thing:6705691
