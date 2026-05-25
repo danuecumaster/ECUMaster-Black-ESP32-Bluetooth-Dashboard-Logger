@@ -210,7 +210,7 @@ This updates the RTC with the correct compile-time and restores accurate timesta
   https://www.thingiverse.com/thing:6705691
 
 - **3D Printed Case #2 for RTC**<br> 
-  https://drive.google.com/drive/folders/1Sk4sIXgLAqPZ03BzYb0IwUftMXJ9QMLN?usp=sharing
+  https://drive.google.com/file/d/1MEJ4LIrxY39ujAgtq9f_r91kAx5oW17X/view?usp=sharing
 
 - **EMU Black (ECU Master Black)**<br>
   https://www.ecumaster.com/products/emu-black/
