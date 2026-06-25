@@ -1,3 +1,4 @@
+/**** LIBRARIES ****/
 #include <Arduino.h>
 #include <Wire.h>
 #include "RTClib.h"
@@ -13,19 +14,22 @@ extern const lv_font_t ui_font_JBM_18;
 extern const lv_font_t ui_font_JBM_15;
 extern const lv_font_t ui_font_JBM_10;
 using namespace std;
+/**** LIBRARIES ****/
 
-//RTC VIA I2C
+/**** RTC VIA I2C ****/
 RTC_DS3231 rtc;
 bool rtcAvailable = false;
-#define SDA_PIN 21
-#define SCL_PIN 22
-#define UPLOAD_DELAY_SEC 140       //ADD 2 MINS TO RTC CLOCK SO IT STAYS REATIVELY CORRECT 
-#define FORCE_RTC_UPDATE false     //SET TO TRUE IF YOU WANT TO FORCE RTC SYNC WITHOUT REMOVING THE BATTERY
+#define SDA_PIN 			21
+#define SCL_PIN 			22
+#define UPLOAD_DELAY_SEC 	140       // OFFSET TO COMPENSATE UPLOAD/BOOT TIME BEFORE RTC SYNC
+#define FORCE_RTC_UPDATE 	false     // TRUE = FORCE RTC TIME UPDATE EVEN IF POWER WAS NOT LOST
+/**** RTC VIA I2C ****/
 
-//BT SETTINGS
-//#define USE_NAME
+/**** BLUETOOTH SETTINGS ****/
+//#define USE_NAME					  // UNCOMMENT TO CONNECT VIA THE EMU BLUETOOTH DEVICE NAME
 const char *pin = "1234";             // EMU BLUETOOTH PIN
 String myBtName = "ESP32-BT-Master";  // ESP32 BLUETOOTH NAME
+/**** BLUETOOTH SETTINGS ****/
 
 #if !defined(CONFIG_BT_SPP_ENABLED)
 	#error Serial Bluetooth not available or not enabled. It is only available for the ESP32 chip.
@@ -34,19 +38,20 @@ String myBtName = "ESP32-BT-Master";  // ESP32 BLUETOOTH NAME
 BluetoothSerial SerialBT;
 
 #ifdef USE_NAME
-	String slaveName = "EMUCANBT_SPP"; //EMU BLUETOOTH NAME
+	String slaveName = "EMUCANBT_SPP"; 								// EMU BLUETOOTH DEVICE NAME
 #else
-	uint8_t address[6] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }; //EMU MAC ADDRESS
+	uint8_t address[6] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }; 	// EMU MAC ADDRESS
 #endif
 
-//SD CARD PINS
-#define SCK  18
-#define MISO 19
-#define MOSI 23
-#define CS   5
+/**** SD PINS ****/
+#define SCK  				18
+#define MISO 				19
+#define MOSI 				23
+#define CS   				5
+/**** SD PINS ****/
 
-//LOG SETTINGS
-#define LOG_BUF_SIZE 512
+/**** LOG FILE ****/
+#define LOG_BUF_SIZE 		512
 File logFile;
 unsigned long lastLogMillis     = 0;
 uint32_t logCounter             = 0;
@@ -55,25 +60,29 @@ const uint64_t MIN_FREE_BYTES   = 100ULL * 1024ULL * 1024ULL; // 100 MB
 static unsigned long lastFlush  = 0;
 uint16_t logIdx             	= 0;
 uint8_t logBuf[LOG_BUF_SIZE];
+/**** LOG FILE ****/
 
-//FLAGS
+/**** FLAGS ****/
 const int backLightPin  = 27;
-const int buzzerPin     = 16;   //NEW PIN TO ALLOW PIN 22 TO BE USED FOR I2C
+const int buzzerPin     = 16; 
 const int ledPin1       = 4; 
 const int ledPin2       = 17; 
 bool buzzerOn           = false;
 bool buzzWindow     	= false;
 bool btIconSts          = false;
 bool sdOK               = false;
+/**** FLAGS ****/
 
+/**** STYLES ****/
 static lv_style_t style_bt;
 static lv_style_t style_max0;
 static lv_style_t style_max1;
 static lv_style_t style_max2;
 static lv_style_t style_max3;
 static bool style_initialized = false;
+/**** STYLES ****/
 
-//ECU VALUE SETUP
+/**** ECU VALUE VARS ****/
 int rpm;
 int spd;
 float afr;
@@ -90,30 +99,35 @@ int maxclt     = -40;
 
 unsigned long previousMillis          = 0;
 const unsigned long reconnectInterval = 5000;
+/**** ECU VALUE VARS ****/
 
-//FONTS
+/**** FONTS ****/
 LV_FONT_DECLARE(lv_font_montserrat_14);
 LV_FONT_DECLARE(lv_font_montserrat_28);
 LV_FONT_DECLARE(ui_font_JBM_18);                
 LV_FONT_DECLARE(ui_font_JBM_15);                
-LV_FONT_DECLARE(ui_font_JBM_10);                      
+LV_FONT_DECLARE(ui_font_JBM_10);    
+/**** FONTS ****/
 
-//LABELS
+/**** LABELS ****/
 lv_obj_t *bt_icon_label;
 lv_obj_t *sd_icon_label;
 lv_obj_t *rtc_icon_label;
 lv_obj_t *max_icon_label;  
 lv_obj_t *max_icon_label1;  
 lv_obj_t *max_val_label_clt;
-lv_obj_t *max_val_label_bst;            
+lv_obj_t *max_val_label_bst;
+/**** LABELS ****/
 
-// DISPLAY & LVGL SETUP
+
+/**** DISPLAY & LVGL SETUP ****/ 
 TFT_eSPI tft = TFT_eSPI();
 static lv_disp_draw_buf_t draw_buf;
 static lv_color_t buf[LV_HOR_RES_MAX * 20];
 lv_obj_t *table;
+/**** DISPLAY & LVGL SETUP ****/ 
 
-//SET RTC TIMESTAMP 
+/**** SET RTC TIMESTAMP ****/ 
 void setTimestamp() {
 	if (!rtc.begin()) {
 		Serial.println("RTC not found");
@@ -130,8 +144,9 @@ void setTimestamp() {
 		rtc.adjust(adjusted);
 	}
 }
+/**** SET RTC TIMESTAMP ****/ 
 
-//GET RTC TIMESTAMP
+/**** GET RTC TIMESTAMP ****/ 
 String getTimestamp() {
 	if (!rtcAvailable) { 
 		update_rtc_icon_color(false); 
@@ -152,8 +167,9 @@ String getTimestamp() {
 	update_rtc_icon_color(true);
 	return String(buf);
 }
+/**** GET RTC TIMESTAMP ****/ 
 
-//WRITE LOGS
+/**** WRITE LOGS ****/ 
 void logEMU(uint8_t *frame) {
 	if (!logFile) return;
 
@@ -175,16 +191,18 @@ void logEMU(uint8_t *frame) {
 		lastFlush = millis();
 	}
 }
+/**** WRITE LOGS ****/ 
 
-//CHECK STORAGE SPACE
+/**** CHECK STORAGE SPACE ****/ 
 uint64_t getFreeBytes() {
 	uint64_t total = SD.totalBytes();
 	uint64_t used  = SD.usedBytes();
 	if (total <= used) { return 0; }
 	return total - used;
 }
+/**** CHECK STORAGE SPACE ****/ 
 
-//MAINTAIN FREE SPACE IN SD
+/**** MAINTAIN FREE SPACE IN SD ****/ 
 void ensureFreeSpace() {
 	uint64_t freeBytes = getFreeBytes();
 	if (freeBytes >= MIN_FREE_BYTES) {
@@ -244,8 +262,9 @@ void ensureFreeSpace() {
 	Serial.print("Free space after cleanup: ");
 	Serial.println(getFreeBytes());
 }
+/**** MAINTAIN FREE SPACE IN SD ****/ 
 
-// LVGL DISPLAY FLUSH CALLBACK
+/**** LVGL DISPLAY FLUSH CALLBACK ****/  
 void my_disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_p) {
 	uint16_t w = area->x2 - area->x1 + 1;
 	uint16_t h = area->y2 - area->y1 + 1;
@@ -255,8 +274,9 @@ void my_disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color
 	tft.endWrite();
 	lv_disp_flush_ready(disp);
 }
+/**** LVGL DISPLAY FLUSH CALLBACK ****/  
 
-// INITIALIZE LVGL TABLE
+/**** INITIALIZE LVGL TABLE ****/
 void create_table() {
 	lv_obj_set_style_bg_color(lv_scr_act(), lv_color_make(30, 30, 30), LV_PART_MAIN);
 
@@ -313,8 +333,9 @@ void create_table() {
 	create_bt_icon();
 	lv_timer_handler();
 }
+/**** INITIALIZE LVGL TABLE ****/
 
-//ESP32 SETUP
+/**** ESP32 SETUP ****/
 void setup() {
 	setCpuFrequencyMhz(240);
 	
@@ -326,11 +347,11 @@ void setup() {
 	tft.setRotation(1);
 	Serial.begin(1000000);
 
-	//SETUP I2C
+	// SETUP I2C
 	Wire.begin(SDA_PIN, SCL_PIN);
 	setTimestamp();
 
-	//BUZZER-LED PIN HACK
+	// BUZZER-LED PIN HACK
 	pinMode(buzzerPin, INPUT);
 	pinMode(ledPin1, INPUT);
 	pinMode(ledPin2, INPUT);
@@ -349,7 +370,7 @@ void setup() {
 	disp_drv.draw_buf = &draw_buf;
 	lv_disp_drv_register(&disp_drv);
 
-	//BT START
+	// BLUETOOTH START
 	SerialBT.begin(myBtName, true);
 
 	create_table();
@@ -358,8 +379,9 @@ void setup() {
 	connectToBt();
 	update_sd_icon_color();
 }
+/**** ESP32 SETUP ****/
 
-//BLUETOOTH CONNECTION 
+/**** BLUETOOTH CONNECTION ****/
 void connectToBt() {
 	bool connected;
 	#ifndef USE_NAME
@@ -379,8 +401,9 @@ void connectToBt() {
 	}
 	update_bt_icon_color(SerialBT.hasClient(), false);
 }
+/**** BLUETOOTH CONNECTION ****/
 
-//SD CARD SETUP
+/**** SD CARD SETUP ****/
 void setupSD() {
 	SPI.begin(SCK, MISO, MOSI, CS);
 	if (!SD.begin(CS)) {
@@ -403,8 +426,9 @@ void setupSD() {
 	Serial.print("Logging to ");
 	Serial.println(filename);
 }
+/**** SD CARD SETUP ****/
 
-//CHAR BUFFERS
+/**** CHAR BUFFERS ****/
 static char buf_rpm[12];
 static char buf_spd[16];
 static char buf_afr[12];
@@ -416,8 +440,9 @@ static char buf_inj[12];
 static char buf_bat[12];
 static char buf_max_clt[32];
 static char buf_max_boost[32];
+/**** CHAR BUFFERS ****/
 
-//READ BT DATA STREAM
+/**** READ BLUETOOTH DATA STREAM ****/
 bool readFrame(uint8_t *frame) {
 	static uint8_t buf[5];
 	static uint8_t idx = 0;
@@ -432,14 +457,15 @@ bool readFrame(uint8_t *frame) {
 			idx = 0;	// CLEAN RESET ONLY ON SUCCESS
 			return true;
 		}
-		//RESYNC: SLIDE WINDOW BY 1 BYTE
+		// RESYNC: SLIDE WINDOW BY 1 BYTE
 		memmove(buf, buf + 1, 4);
 		idx = 4;
 	}
 	return false;
 }
+/**** READ BLUETOOTH DATA STREAM ****/
 
-//ESP32 LOOP
+/**** ESP32 LOOP ****/
 void loop() {
 	uint8_t frame[5];
 	uint8_t channel;
@@ -459,7 +485,7 @@ void loop() {
 
 	// WAIT UNTIL AT LEAST 5 BYTES ARE AVAILABLE
 	while (readFrame(frame)) {
-		logEMU(frame); //WRITE LOG
+		logEMU(frame); // WRITE LOG
 
 		channel = frame[0];
 		value   = (frame[2] << 8) | frame[3];
@@ -470,7 +496,7 @@ void loop() {
 				continue;
 		}
 
-		//SANITIZE DISPLAY
+		// SANITIZE DISPLAY
 		if (channel == 1  && value > 9000) continue;
 		if (channel == 24 && value > 250)  continue;
 		if (channel == 28 && value > 500)  continue;
@@ -525,7 +551,7 @@ void loop() {
 		}
 	}
 
-	//BUZZER WARNING
+	// BUZZER WARNING
 	buzzerOn = (cel > 0 || clt > 110 || rpm > 7000 || boost > 1.20 || (bat < 11.00 && bat > 1.00)); 
 	buzzWindow = buzzerOn && (millis() % 600 < 300);
 	if (buzzWindow) {
@@ -538,8 +564,9 @@ void loop() {
 	lv_obj_invalidate(table);
 	lv_timer_handler();
 }
+/**** ESP32 LOOP ****/
 
-//CEL DECODE
+/**** CEL DECODE ****/
 int decodeCheckEngine(uint16_t value) {
 	int cel_codes 	 = 0; 
 	string cel_names = "";
@@ -548,39 +575,40 @@ int decodeCheckEngine(uint16_t value) {
 	}
 	else if (value > 0) {
 		if (value & (1 << 0)) {
-			cel_codes++;  // Bit 0
+			cel_codes++;  // BIT 0
 			cel_names = "CLT ";
 		}
 		if (value & (1 << 1)) {
-			cel_codes++;  // Bit 1
+			cel_codes++;  // BIT 1
 			cel_names += "IAT ";
 		}
 		if (value & (1 << 2)) {
-			cel_codes++;  // Bit 2
+			cel_codes++;  // BIT 2
 			cel_names += "MAP ";
 		}
 		if (value & (1 << 3)) {
-			cel_codes++;  // Bit 3
+			cel_codes++;  // BIT 3
 			cel_names += "WBO ";
 		}
 		if (value & (1 << 8)) {
-			cel_codes++;  // Bit 8
+			cel_codes++;  // BIT 8
 			cel_names += "FF SENSOR ";
 		}
 		if (value & (1 << 9)) {
-			cel_codes++;  // Bit 9
+			cel_codes++;  // BIT 9
 			cel_names += "DBW ";
 		}
 		if (value & (1 << 10)) {
-			cel_codes++;  // Bit 10
+			cel_codes++;  // BIT 10
 			cel_names += "FPR ";
 		}
 		lv_table_set_cell_value(table, 5, 1, cel_names.c_str());
 		return cel_codes;
 	}
 }
+/**** CEL DECODE ****/
 
-// CELL ALIGNMENT FIX
+/**** CELL ALIGNMENT FIX ****/ 
 void my_table_event_cb(lv_event_t * e) {
 	lv_obj_t * table = lv_event_get_target(e);
 	lv_obj_draw_part_dsc_t * dsc = (lv_obj_draw_part_dsc_t *)lv_event_get_param(e);
@@ -600,8 +628,9 @@ void my_table_event_cb(lv_event_t * e) {
 		}
 	}
 }
+/**** CELL ALIGNMENT FIX ****/ 
 
-//WARNING COLORS AND CELL ALIGNMENT
+/**** CELL COLORS ****/ 
 static void table_event_cb_bg(lv_event_t *e) {
 	lv_obj_t *table = lv_event_get_target(e);
 	lv_obj_draw_part_dsc_t *dsc = (lv_obj_draw_part_dsc_t *)lv_event_get_param(e);
@@ -661,8 +690,9 @@ static void table_event_cb_bg(lv_event_t *e) {
 		dsc->label_dsc->color = text_color;
 	}
 }
+/**** CELL COLORS ****/ 
 
-//UPDATE BT ICON
+/**** UPDATE BLUETOOTH ICON ****/ 
 void update_bt_icon_color(bool is_connected, bool firstTime) {
 	if (btIconSts != is_connected || firstTime) {
 		if (!style_initialized) {
@@ -678,8 +708,9 @@ void update_bt_icon_color(bool is_connected, bool firstTime) {
 		btIconSts = is_connected;
 	}
 }
+/**** UPDATE BLUETOOTH ICON ****/ 
 
-//UPDATE SD ICON
+/**** UPDATE SD ICON ****/ 
 void update_sd_icon_color() {
 	if (!sd_icon_label) { return; }
 
@@ -689,7 +720,9 @@ void update_sd_icon_color() {
 		lv_obj_set_style_text_color(sd_icon_label, lv_color_make(0,0,255), 0); 
 	}
 }
+/**** UPDATE SD ICON ****/ 
 
+/**** UPDATE RTC ICON ****/ 
 void update_rtc_icon_color(bool status) {
 	if (status) { 
 		lv_obj_set_style_text_color(rtc_icon_label, lv_color_make(0,255,0), 0); 
@@ -697,8 +730,9 @@ void update_rtc_icon_color(bool status) {
 		lv_obj_set_style_text_color(rtc_icon_label, lv_color_make(0,0,255), 0); 
 	}
 }
+/**** UPDATE RTC ICON ****/ 
 
-//CREATE ICONS AND CUSTOM TEXT
+/**** CREATE ICONS AND CUSTOM TEXT ****/ 
 void create_bt_icon() {
 	bt_icon_label = lv_label_create(lv_scr_act());
 	lv_label_set_text(bt_icon_label, LV_SYMBOL_BLUETOOTH);
@@ -707,12 +741,12 @@ void create_bt_icon() {
 	update_bt_icon_color(SerialBT.hasClient(), true);
 
 	sd_icon_label = lv_label_create(lv_scr_act());
-	lv_label_set_text(sd_icon_label, LV_SYMBOL_SAVE); // storage icon
+	lv_label_set_text(sd_icon_label, LV_SYMBOL_SAVE); // STORAGE ICON
 	lv_obj_set_style_text_font(sd_icon_label, &lv_font_montserrat_28, LV_PART_MAIN);
 	lv_obj_align(sd_icon_label, LV_ALIGN_BOTTOM_RIGHT, -30, -5);
 
 	rtc_icon_label = lv_label_create(lv_scr_act());
-	lv_label_set_text(rtc_icon_label, LV_SYMBOL_BELL); // time icon
+	lv_label_set_text(rtc_icon_label, LV_SYMBOL_BELL); // TIME ICON
 	lv_obj_set_style_text_font(rtc_icon_label, &lv_font_montserrat_28, LV_PART_MAIN);
 	lv_obj_align(rtc_icon_label, LV_ALIGN_BOTTOM_RIGHT, -60, -5);
 
@@ -748,8 +782,9 @@ void create_bt_icon() {
 	lv_obj_align(max_val_label_bst, LV_ALIGN_BOTTOM_RIGHT, -3, -42);
 	lv_label_set_text(max_val_label_bst, String(" ").c_str());
 }
+/**** CREATE ICONS AND CUSTOM TEXT ****/ 
 
-//GET NEXT FILE NAME
+/**** GET NEXT FILE NAME ****/ 
 String getNextFilename() {
 	String ts = getTimestamp();
 	// RTC WORKING
@@ -788,3 +823,4 @@ String getNextFilename() {
 	if (last == 0) { return "/1.emualog"; }
 	return "/" + String(last + 1) + ".emualog";
 }
+/**** GET NEXT FILE NAME ****/ 
